@@ -1,0 +1,21 @@
+{
+  "browserify": {
+    "dist/browserified.js":"./index.js"
+  },
+  "exclude": {
+    "jshint": [
+      "browserified.js"
+    ]
+  },
+  "additionaltargets": {
+  },
+  "dependencies": {
+    "js": [
+      "allex:jqueryelements:lib"
+    ]
+  },
+  "protoboard": {
+    "role":"web_component",
+    "js_doc_filters": "^(src)"
+  }
+}
