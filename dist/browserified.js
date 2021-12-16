@@ -430,7 +430,7 @@ function createHashCollectorMixin (lib) {
     this.collectorvalid = null;
     this.collectorvalue = null;
     this.hashCollectorListeners = [];
-    this.wantsSubmit = new lib.HookCollection();
+    this.wantsSubmit = this.createBufferableHookCollection(); //new lib.HookCollection();
   }
   HashCollectorMixin.prototype.destroy = function () {
     if (this.wantsSubmit) {
