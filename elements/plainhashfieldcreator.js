@@ -12,6 +12,7 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
     TextFromHashMixin.call(this, options);
     DataHolderMixin.call(this, options);
     InputHandlerMixin.call(this, options);
+    this.set('valid', this.isValueValid());
   }
   lib.inherit(PlainHashFieldElement, WebElement);
   TextFromHashMixin.addMethods(PlainHashFieldElement);
@@ -29,7 +30,7 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
     this.setDataReceived();
     if (data && fieldname) {
       val = lib.readPropertyFromDotDelimitedString(data, fieldname);
-      this.set('valid', lib.isVal(val) && !!val);
+      this.set('valid', this.isValueValid(val));
       return val;
     }
     return null;
@@ -40,6 +41,12 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
     //console.log(this.id, 'setting valid', lib.isVal(val) && !!val, 'because', val);
     this.set('valid', lib.isVal(val) && !!val);
     return ret;
+  };
+  PlainHashFieldElement.prototype.isValueValid = function (val) {
+    if (!this.get('required')) {
+      return true;
+    }
+    return lib.isVal(val) && !!val;
   };
 
   applib.registerElementType('PlainHashFieldElement', PlainHashFieldElement);

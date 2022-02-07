@@ -210,6 +210,13 @@ function createHashCollectorMixin (lib) {
       return;
     }
     if (!chld.get('required')) {
+      try {
+        if (chld.get('valid')) {
+          validobj.valid = true;
+        }
+      } catch (e) {
+        //console.log('Could not get "valid" from', chld);
+      }
       return;
     }
     try {
