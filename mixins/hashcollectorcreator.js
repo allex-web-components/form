@@ -7,8 +7,10 @@ function createHashCollectorMixin (lib) {
     this.collectorvalue = null;
     this.hashCollectorListeners = [];
     this.wantsSubmit = this.createBufferableHookCollection(); //new lib.HookCollection();
+    this.hardcodedFields = options ? options.hardcoded_fields : null;
   }
   HashCollectorMixin.prototype.destroy = function () {
+    this.hardcodedFields = null;
     if (this.wantsSubmit) {
       this.wantsSubmit.destroy();
     }
@@ -22,7 +24,7 @@ function createHashCollectorMixin (lib) {
     this.collectorinitialvalid = null;
   };
   HashCollectorMixin.prototype.get_value = function () {
-    return this.collectorvalue;
+    return lib.extend({}, this.collectorvalue, this.hardcodedFields);
   };
   HashCollectorMixin.prototype.set_value = function (value) {
     this.collectorvalue = value;

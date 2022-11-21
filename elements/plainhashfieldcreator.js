@@ -25,16 +25,6 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
     WebElement.prototype.__cleanUp.call(this);
   };
   PlainHashFieldElement.prototype.onInputElementKeyUp = PlainHashFieldElement.prototype.onInputElementChange;
-  PlainHashFieldElement.prototype.hashToText = function (data) {
-    var fieldname = this.getConfigVal('hashfield'), val;
-    this.setDataReceived();
-    if (data && fieldname) {
-      val = lib.readPropertyFromDotDelimitedString(data, fieldname);
-      this.set('valid', this.isValueValid(val));
-      return val;
-    }
-    return null;
-  };
   PlainHashFieldElement.prototype.set_value = function (val) {
     var ret = InputHandlerMixin.prototype.set_value.call(this, val);
     this.setDataReceived(); //this was added late, might cause problems later

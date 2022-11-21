@@ -84,16 +84,6 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
     WebElement.prototype.__cleanUp.call(this);
   };
   PlainHashFieldElement.prototype.onInputElementKeyUp = PlainHashFieldElement.prototype.onInputElementChange;
-  PlainHashFieldElement.prototype.hashToText = function (data) {
-    var fieldname = this.getConfigVal('hashfield'), val;
-    this.setDataReceived();
-    if (data && fieldname) {
-      val = lib.readPropertyFromDotDelimitedString(data, fieldname);
-      this.set('valid', this.isValueValid(val));
-      return val;
-    }
-    return null;
-  };
   PlainHashFieldElement.prototype.set_value = function (val) {
     var ret = InputHandlerMixin.prototype.set_value.call(this, val);
     this.setDataReceived(); //this was added late, might cause problems later
@@ -438,8 +428,10 @@ function createHashCollectorMixin (lib) {
     this.collectorvalue = null;
     this.hashCollectorListeners = [];
     this.wantsSubmit = this.createBufferableHookCollection(); //new lib.HookCollection();
+    this.hardcodedFields = options ? options.hardcoded_fields : null;
   }
   HashCollectorMixin.prototype.destroy = function () {
+    this.hardcodedFields = null;
     if (this.wantsSubmit) {
       this.wantsSubmit.destroy();
     }
@@ -453,7 +445,7 @@ function createHashCollectorMixin (lib) {
     this.collectorinitialvalid = null;
   };
   HashCollectorMixin.prototype.get_value = function () {
-    return this.collectorvalue;
+    return lib.extend({}, this.collectorvalue, this.hardcodedFields);
   };
   HashCollectorMixin.prototype.set_value = function (value) {
     this.collectorvalue = value;
@@ -1176,7 +1168,7 @@ function createTextFromHashMixin (lib) {
   TextFromHashMixin.prototype.destroy = function () {
   };
   TextFromHashMixin.prototype.get_data = function () {
-    return void 0;
+    return this.get(this.targetedStateForHashToText());
   };
   TextFromHashMixin.prototype.set_data = function (data) {
     var t = this.hashToText(data), pref, suff;
@@ -1196,6 +1188,7 @@ function createTextFromHashMixin (lib) {
       t = '';
     }
     this.set(this.targetedStateForHashToText(), t);
+    return true;
   };
   TextFromHashMixin.prototype.targetedStateForHashToText = function () {
     if (this.getConfigVal('text_is_value')) {
@@ -1206,15 +1199,26 @@ function createTextFromHashMixin (lib) {
     }
     return 'text';
   };
-  TextFromHashMixin.prototype.hashToText = function () {
-    throw new Error(this.constructor.name+' has to implement its own hashToText');
+  TextFromHashMixin.prototype.hashToText = function (data) {
+    var fieldname = this.getConfigVal('hashfield'), val;
+    this.setDataReceived();
+    if (data && fieldname) {
+      val = this.readTextValueFromHash(data, fieldname);
+      this.set('valid', this.isValueValid(val));
+      return val;
+    }
+    return null;
   };
+  TextFromHashMixin.prototype.readTextValueFromHash = function (data, fieldname) {
+    return lib.readPropertyFromDotDelimitedString(data, fieldname);
+  };  
 
   TextFromHashMixin.addMethods = function (klass) {
     lib.inheritMethods(klass, TextFromHashMixin
       ,'get_data'
       ,'set_data'
       ,'hashToText'
+      ,'readTextValueFromHash'
       ,'targetedStateForHashToText'
     );
   };
