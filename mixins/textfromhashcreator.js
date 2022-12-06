@@ -48,7 +48,14 @@ function createTextFromHashMixin (lib) {
     return null;
   };
   TextFromHashMixin.prototype.readTextValueFromHash = function (data, fieldname) {
-    return lib.readPropertyFromDotDelimitedString(data, fieldname);
+    var ret = lib.readPropertyFromDotDelimitedString(data, fieldname), default_value;
+    if (!lib.isVal(ret)) {
+      default_value = this.getConfigVal('default_value');
+      if (lib.isVal(default_value)) {
+        return default_value;
+      }
+    }
+    return ret;
   };  
 
   TextFromHashMixin.addMethods = function (klass) {

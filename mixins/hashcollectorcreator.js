@@ -2,6 +2,8 @@ function createHashCollectorMixin (lib) {
   'use strict';
 
   function HashCollectorMixin (options) {
+    this.hashCollectorChannels = options.hashcollectorchannels || null;
+    this.activeHashCollectorChannel = options.activehashcollectorchannel || null;
     this.collectorinitialvalid = null;
     this.collectorvalid = null;
     this.collectorvalue = null;
@@ -22,6 +24,7 @@ function createHashCollectorMixin (lib) {
     this.collectorvalue = null;
     this.collectorvalid = null;
     this.collectorinitialvalid = null;
+    this.hashCollectorChannels = null;
   };
   HashCollectorMixin.prototype.get_value = function () {
     return lib.extend({}, this.collectorvalue, this.hardcodedFields);
@@ -48,6 +51,15 @@ function createHashCollectorMixin (lib) {
     this.collectorvalid = valid;
     return true;
   };
+  HashCollectorMixin.prototype.get_activeHashCollectorChannel = function () {
+    return this.activeHashCollectorChannel;
+  };
+  HashCollectorMixin.prototype.set_activeHashCollectorChannel = function (ahcc) {
+    this.activeHashCollectorChannel = ahcc;
+    maybePropagateActiveHashCollectorChannel.call(this, ahcc);
+    this.recheckChildren();
+    return true;
+  };
   HashCollectorMixin.prototype.fireSubmit = function () {
     if (!this.get('valid')) {
       return;
@@ -55,11 +67,15 @@ function createHashCollectorMixin (lib) {
     this.wantsSubmit.fire(this.get('value'));
   };
   HashCollectorMixin.prototype.recheckChildren = function () {
-    var vldfromchildren, valsfromchildren;
+    var fldname, vldfromchildren, valsfromchildren;
+    fldname = (this.hashCollectorChannels && this.hashCollectorChannels[this.activeHashCollectorChannel])
+    ? (this.hashCollectorChannels[this.activeHashCollectorChannel] || 'fieldname')
+    :
+    'fieldname';
     vldfromchildren = getValidityFromChildren.call(this);
-    //console.log('finally', this.id, 'valid', vldfromchildren, 'with', this.mydata);
+    //console.log('finally', this.id, 'valid', vldfromchildren, 'with', this.mydata);    
     this.set('valid', vldfromchildren);
-    valsfromchildren = getValuesFromChildren.call(this);
+    valsfromchildren = getValuesFromChildren.call(this, fldname);
     /*
     if (vldfromchildren) {
       console.log(this.id, 'valid with values', valsfromchildren);
@@ -88,6 +104,8 @@ function createHashCollectorMixin (lib) {
       ,'set_initiallyvalid'
       ,'get_valid'
       ,'set_valid'
+      ,'get_activeHashCollectorChannel'
+      ,'set_activeHashCollectorChannel'
       ,'fireSubmit'
       ,'recheckChildren'
       ,'hookToCollectorValidity'
@@ -99,8 +117,8 @@ function createHashCollectorMixin (lib) {
       klass.prototype.postInitializationMethodNames.concat(['hookToCollectorValidity']);
   };
 
-  function datagetter (data, chld) {
-    var fieldname = chld.getConfigVal('fieldname'),
+  function datagetter (fldname, data, chld) {
+    var fieldname = chld.getConfigVal(fldname),
       val;
     if (lib.isUndef(fieldname)) {
       //console.warn('Child', chld.constructor.name, chld.id, 'has no fieldname');
@@ -170,12 +188,13 @@ function createHashCollectorMixin (lib) {
   }
 
   //static method, "this" matters
-  function getValuesFromChildren () {
-    var ret = {}, _r = ret;
+  function getValuesFromChildren (fldname) {
+    var ret = {}, _r = ret, _fn = fldname;
     if (!this.__children) {
       return ret;
     }
-    this.__children.traverse(datagetter.bind(null, _r));
+    this.__children.traverse(datagetter.bind(null, _fn, _r));
+    _fn = null;
     _r = null;
     return ret;
   }
@@ -244,6 +263,16 @@ function createHashCollectorMixin (lib) {
       validobj.valid = true;
     } catch (e) {
       //console.log('Could not get "valid" from', chld);
+    }
+  }
+
+  function maybePropagateActiveHashCollectorChannel (ahcc) {    
+    this.__children.traverse(maybeAssignActiveHashCollectorChannel.bind(null, ahcc));
+    ahcc = null;
+  }
+  function maybeAssignActiveHashCollectorChannel (ahcc, chld) {
+    if (chld.hashCollectorChannels) {
+      chld.set('activeHashCollectorChannel', ahcc);
     }
   }
 

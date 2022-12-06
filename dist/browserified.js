@@ -42,6 +42,25 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
 }
 module.exports = createCheckBoxFieldElement;
 },{}],2:[function(require,module,exports){
+function dummyFieldElementCreator (execlib, applib) {
+  'use strict';
+
+  var lib = execlib.lib;
+  var BasicElement = applib.getElementType('BasicElement');
+  
+  function DummyFieldElement (id, options) {
+    BasicElement.call(this, id, options);
+  }
+  lib.inherit(DummyFieldElement, BasicElement);
+  DummyFieldElement.prototype.__cleanUp = function () {
+    BasicElement.prototype.__cleanUp.call(this);
+  };
+  DummyFieldElement.prototype.resetData = lib.dummyFunc;
+  
+  applib.registerElementType('DummyFieldElement', DummyFieldElement);
+}
+module.exports = dummyFieldElementCreator;
+},{}],3:[function(require,module,exports){
 function createFormClickable (execlib, applib) {
   'use strict';
 
@@ -66,7 +85,7 @@ function createFormClickable (execlib, applib) {
 }
 module.exports = createFormClickable;
 
-},{}],3:[function(require,module,exports){
+},{}],4:[function(require,module,exports){
 function createFormElement (execlib, applib, mixins) {
   'use strict';
 
@@ -89,10 +108,11 @@ function createFormElement (execlib, applib, mixins) {
 }
 module.exports = createFormElement;
 
-},{}],4:[function(require,module,exports){
+},{}],5:[function(require,module,exports){
 function createElements (execlib, applib, mylib) {
   'use strict';
 
+  require('./dummyfieldcreator')(execlib, applib);
   require('./formcreator')(execlib, applib, mylib.mixins);
   require('./formclickablecreator')(execlib, applib);
   require('./plainhashfieldcreator')(execlib, applib, mylib.mixins);
@@ -100,7 +120,7 @@ function createElements (execlib, applib, mylib) {
 }
 module.exports = createElements;
 
-},{"./checkboxfieldcreator":1,"./formclickablecreator":2,"./formcreator":3,"./plainhashfieldcreator":5}],5:[function(require,module,exports){
+},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcreator":4,"./plainhashfieldcreator":6}],6:[function(require,module,exports){
 function createPlainHashFieldElement (execlib, applib, mixins) {
   'use strict';
 
@@ -146,7 +166,7 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
 }
 module.exports = createPlainHashFieldElement;
 
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 (function (execlib) {
   'use strict';
 
@@ -163,7 +183,7 @@ module.exports = createPlainHashFieldElement;
   lR.register('allex_formwebcomponent', mylib);
 })(ALLEX);
 
-},{"./elements":4,"./mixins":12}],7:[function(require,module,exports){
+},{"./elements":5,"./mixins":13}],8:[function(require,module,exports){
 function createBitMaskCheckboxesMixin (lib) {
   'use strict';
 
@@ -292,7 +312,7 @@ function createBitMaskCheckboxesMixin (lib) {
 }
 module.exports = createBitMaskCheckboxesMixin;
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 function createDataHolder (lib) {
   'use strict';
 
@@ -355,7 +375,7 @@ function createDataHolder (lib) {
 }
 module.exports = createDataHolder;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 function createFormMixin (lib, mylib) {
   'use strict';
 
@@ -462,11 +482,13 @@ function createFormMixin (lib, mylib) {
 };
 module.exports = createFormMixin;
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 function createHashCollectorMixin (lib) {
   'use strict';
 
   function HashCollectorMixin (options) {
+    this.hashCollectorChannels = options.hashcollectorchannels || null;
+    this.activeHashCollectorChannel = options.activehashcollectorchannel || null;
     this.collectorinitialvalid = null;
     this.collectorvalid = null;
     this.collectorvalue = null;
@@ -487,6 +509,7 @@ function createHashCollectorMixin (lib) {
     this.collectorvalue = null;
     this.collectorvalid = null;
     this.collectorinitialvalid = null;
+    this.hashCollectorChannels = null;
   };
   HashCollectorMixin.prototype.get_value = function () {
     return lib.extend({}, this.collectorvalue, this.hardcodedFields);
@@ -513,6 +536,15 @@ function createHashCollectorMixin (lib) {
     this.collectorvalid = valid;
     return true;
   };
+  HashCollectorMixin.prototype.get_activeHashCollectorChannel = function () {
+    return this.activeHashCollectorChannel;
+  };
+  HashCollectorMixin.prototype.set_activeHashCollectorChannel = function (ahcc) {
+    this.activeHashCollectorChannel = ahcc;
+    maybePropagateActiveHashCollectorChannel.call(this, ahcc);
+    this.recheckChildren();
+    return true;
+  };
   HashCollectorMixin.prototype.fireSubmit = function () {
     if (!this.get('valid')) {
       return;
@@ -520,11 +552,15 @@ function createHashCollectorMixin (lib) {
     this.wantsSubmit.fire(this.get('value'));
   };
   HashCollectorMixin.prototype.recheckChildren = function () {
-    var vldfromchildren, valsfromchildren;
+    var fldname, vldfromchildren, valsfromchildren;
+    fldname = (this.hashCollectorChannels && this.hashCollectorChannels[this.activeHashCollectorChannel])
+    ? (this.hashCollectorChannels[this.activeHashCollectorChannel] || 'fieldname')
+    :
+    'fieldname';
     vldfromchildren = getValidityFromChildren.call(this);
-    //console.log('finally', this.id, 'valid', vldfromchildren, 'with', this.mydata);
+    //console.log('finally', this.id, 'valid', vldfromchildren, 'with', this.mydata);    
     this.set('valid', vldfromchildren);
-    valsfromchildren = getValuesFromChildren.call(this);
+    valsfromchildren = getValuesFromChildren.call(this, fldname);
     /*
     if (vldfromchildren) {
       console.log(this.id, 'valid with values', valsfromchildren);
@@ -553,6 +589,8 @@ function createHashCollectorMixin (lib) {
       ,'set_initiallyvalid'
       ,'get_valid'
       ,'set_valid'
+      ,'get_activeHashCollectorChannel'
+      ,'set_activeHashCollectorChannel'
       ,'fireSubmit'
       ,'recheckChildren'
       ,'hookToCollectorValidity'
@@ -564,8 +602,8 @@ function createHashCollectorMixin (lib) {
       klass.prototype.postInitializationMethodNames.concat(['hookToCollectorValidity']);
   };
 
-  function datagetter (data, chld) {
-    var fieldname = chld.getConfigVal('fieldname'),
+  function datagetter (fldname, data, chld) {
+    var fieldname = chld.getConfigVal(fldname),
       val;
     if (lib.isUndef(fieldname)) {
       //console.warn('Child', chld.constructor.name, chld.id, 'has no fieldname');
@@ -635,12 +673,13 @@ function createHashCollectorMixin (lib) {
   }
 
   //static method, "this" matters
-  function getValuesFromChildren () {
-    var ret = {}, _r = ret;
+  function getValuesFromChildren (fldname) {
+    var ret = {}, _r = ret, _fn = fldname;
     if (!this.__children) {
       return ret;
     }
-    this.__children.traverse(datagetter.bind(null, _r));
+    this.__children.traverse(datagetter.bind(null, _fn, _r));
+    _fn = null;
     _r = null;
     return ret;
   }
@@ -712,12 +751,22 @@ function createHashCollectorMixin (lib) {
     }
   }
 
+  function maybePropagateActiveHashCollectorChannel (ahcc) {    
+    this.__children.traverse(maybeAssignActiveHashCollectorChannel.bind(null, ahcc));
+    ahcc = null;
+  }
+  function maybeAssignActiveHashCollectorChannel (ahcc, chld) {
+    if (chld.hashCollectorChannels) {
+      chld.set('activeHashCollectorChannel', ahcc);
+    }
+  }
+
 
   return HashCollectorMixin;
 }
 module.exports = createHashCollectorMixin;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 function createHashDistributorMixin (lib) {
   'use strict';
 
@@ -759,7 +808,7 @@ function createHashDistributorMixin (lib) {
 }
 module.exports = createHashDistributorMixin;
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 function createFormRenderingMixins (execlib, applib) {
   'use strict';
 
@@ -781,7 +830,7 @@ function createFormRenderingMixins (execlib, applib) {
 }
 module.exports = createFormRenderingMixins;
 
-},{"./bitmaskcheckboxescreator":7,"./dataholdercreator":8,"./formcreator":9,"./hashcollectorcreator":10,"./hashdistributorcreator":11,"./inputhandlercreator":13,"./logiccreator":14,"./numericspinnercreator":15,"./radioscreator":16,"./textfromhashcreator":17}],13:[function(require,module,exports){
+},{"./bitmaskcheckboxescreator":8,"./dataholdercreator":9,"./formcreator":10,"./hashcollectorcreator":11,"./hashdistributorcreator":12,"./inputhandlercreator":14,"./logiccreator":15,"./numericspinnercreator":16,"./radioscreator":17,"./textfromhashcreator":18}],14:[function(require,module,exports){
 function createInputHandlerMixin (lib) {
   'use strict';
 
@@ -882,7 +931,7 @@ function createInputHandlerMixin (lib) {
 }
 module.exports = createInputHandlerMixin;
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 function createjQueryFormLogicMixin (lib, applib) {
   'use strict';
   var FormLogicMixin = applib.mixins.FormMixin;
@@ -969,7 +1018,7 @@ function createjQueryFormLogicMixin (lib, applib) {
 }
 module.exports = createjQueryFormLogicMixin;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 function createNumericSpinner (lib) {
   'use strict';
 
@@ -1075,7 +1124,7 @@ function createNumericSpinner (lib) {
 }
 module.exports = createNumericSpinner;
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 function createRadiosMixin (lib) {
   'use strict';
 
@@ -1203,7 +1252,7 @@ function createRadiosMixin (lib) {
 }
 module.exports = createRadiosMixin;
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 function createTextFromHashMixin (lib) {
   'use strict';
 
@@ -1254,7 +1303,14 @@ function createTextFromHashMixin (lib) {
     return null;
   };
   TextFromHashMixin.prototype.readTextValueFromHash = function (data, fieldname) {
-    return lib.readPropertyFromDotDelimitedString(data, fieldname);
+    var ret = lib.readPropertyFromDotDelimitedString(data, fieldname), default_value;
+    if (!lib.isVal(ret)) {
+      default_value = this.getConfigVal('default_value');
+      if (lib.isVal(default_value)) {
+        return default_value;
+      }
+    }
+    return ret;
   };  
 
   TextFromHashMixin.addMethods = function (klass) {
@@ -1271,4 +1327,4 @@ function createTextFromHashMixin (lib) {
 }
 module.exports = createTextFromHashMixin;
 
-},{}]},{},[6]);
+},{}]},{},[7]);
