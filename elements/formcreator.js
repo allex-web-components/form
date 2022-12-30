@@ -16,6 +16,13 @@ function createFormElement (execlib, applib, mixins) {
     WebElement.prototype.__cleanUp.call(this);
   };
 
+  FormElement.prototype.initializeFormForPossibleDataAssignment = function () {
+    if (this.getConfigVal('data')) {
+      this.set('data', this.getConfigVal('data'));
+    }
+  };
+  FormElement.prototype.postInitializationMethodNames.push('initializeFormForPossibleDataAssignment');
+
   applib.registerElementType('FormElement', FormElement);
 }
 module.exports = createFormElement;

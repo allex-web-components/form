@@ -104,11 +104,58 @@ function createFormElement (execlib, applib, mixins) {
     WebElement.prototype.__cleanUp.call(this);
   };
 
+  FormElement.prototype.initializeFormForPossibleDataAssignment = function () {
+    if (this.getConfigVal('data')) {
+      this.set('data', this.getConfigVal('data'));
+    }
+  };
+  FormElement.prototype.postInitializationMethodNames.push('initializeFormForPossibleDataAssignment');
+
   applib.registerElementType('FormElement', FormElement);
 }
 module.exports = createFormElement;
 
 },{}],5:[function(require,module,exports){
+function createFrozenLookupField (execlib, applib, mixins) {
+  'use strict';
+
+  var lib = execlib.lib;
+  var PlainHashFieldElement = applib.getElementType('PlainHashFieldElement');
+  
+  function FrozenLookupFieldElement (id, options) {
+    PlainHashFieldElement.call(this, id, options);
+  }
+  lib.inherit(FrozenLookupFieldElement, PlainHashFieldElement);
+  FrozenLookupFieldElement.prototype.__cleanUp = function () {
+    PlainHashFieldElement.prototype.__cleanUp.call(this);
+  };
+  FrozenLookupFieldElement.prototype.set_data = function (data) {
+    var ret = PlainHashFieldElement.prototype.set_data.call(this, data),
+      val;
+    if (!ret) {
+      return ret;
+    }
+    val = this.readValueFromData(data);
+    this.set('value', val);
+    this.set('valid', this.isValueValid(val));
+    return ret;
+  };
+  FrozenLookupFieldElement.prototype.readValueFromData = function (data) {
+    var valfieldname, val;
+    valfieldname = this.getConfigVal('hashvaluefield');
+    if (data && valfieldname) {
+      val = lib.readPropertyFromDotDelimitedString(data, valfieldname);
+      if (lib.isVal(ret)) {
+        return this.getConfigVal('default_value');
+      }
+      return ret;
+    }
+  };
+  
+  applib.registerElementType('FrozenLookupFieldElement', FrozenLookupFieldElement);
+}
+module.exports = createFrozenLookupField;
+},{}],6:[function(require,module,exports){
 function createElements (execlib, applib, mylib) {
   'use strict';
 
@@ -116,11 +163,12 @@ function createElements (execlib, applib, mylib) {
   require('./formcreator')(execlib, applib, mylib.mixins);
   require('./formclickablecreator')(execlib, applib);
   require('./plainhashfieldcreator')(execlib, applib, mylib.mixins);
+  require('./frozenlookupfieldcreator')(execlib, applib, mylib.mixins);
   require('./checkboxfieldcreator')(execlib, applib, mylib.mixins);
 }
 module.exports = createElements;
 
-},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcreator":4,"./plainhashfieldcreator":6}],6:[function(require,module,exports){
+},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcreator":4,"./frozenlookupfieldcreator":5,"./plainhashfieldcreator":7}],7:[function(require,module,exports){
 function createPlainHashFieldElement (execlib, applib, mixins) {
   'use strict';
 
@@ -166,7 +214,7 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
 }
 module.exports = createPlainHashFieldElement;
 
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 (function (execlib) {
   'use strict';
 
@@ -183,7 +231,7 @@ module.exports = createPlainHashFieldElement;
   lR.register('allex_formwebcomponent', mylib);
 })(ALLEX);
 
-},{"./elements":5,"./mixins":13}],8:[function(require,module,exports){
+},{"./elements":6,"./mixins":14}],9:[function(require,module,exports){
 function createBitMaskCheckboxesMixin (lib) {
   'use strict';
 
@@ -312,7 +360,7 @@ function createBitMaskCheckboxesMixin (lib) {
 }
 module.exports = createBitMaskCheckboxesMixin;
 
-},{}],9:[function(require,module,exports){
+},{}],10:[function(require,module,exports){
 function createDataHolder (lib) {
   'use strict';
 
@@ -375,7 +423,7 @@ function createDataHolder (lib) {
 }
 module.exports = createDataHolder;
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 function createFormMixin (lib, mylib) {
   'use strict';
 
@@ -482,7 +530,7 @@ function createFormMixin (lib, mylib) {
 };
 module.exports = createFormMixin;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 function createHashCollectorMixin (lib) {
   'use strict';
 
@@ -766,7 +814,7 @@ function createHashCollectorMixin (lib) {
 }
 module.exports = createHashCollectorMixin;
 
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 function createHashDistributorMixin (lib) {
   'use strict';
 
@@ -808,7 +856,7 @@ function createHashDistributorMixin (lib) {
 }
 module.exports = createHashDistributorMixin;
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 function createFormRenderingMixins (execlib, applib) {
   'use strict';
 
@@ -830,7 +878,7 @@ function createFormRenderingMixins (execlib, applib) {
 }
 module.exports = createFormRenderingMixins;
 
-},{"./bitmaskcheckboxescreator":8,"./dataholdercreator":9,"./formcreator":10,"./hashcollectorcreator":11,"./hashdistributorcreator":12,"./inputhandlercreator":14,"./logiccreator":15,"./numericspinnercreator":16,"./radioscreator":17,"./textfromhashcreator":18}],14:[function(require,module,exports){
+},{"./bitmaskcheckboxescreator":9,"./dataholdercreator":10,"./formcreator":11,"./hashcollectorcreator":12,"./hashdistributorcreator":13,"./inputhandlercreator":15,"./logiccreator":16,"./numericspinnercreator":17,"./radioscreator":18,"./textfromhashcreator":19}],15:[function(require,module,exports){
 function createInputHandlerMixin (lib) {
   'use strict';
 
@@ -931,7 +979,7 @@ function createInputHandlerMixin (lib) {
 }
 module.exports = createInputHandlerMixin;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 function createjQueryFormLogicMixin (lib, applib) {
   'use strict';
   var FormLogicMixin = applib.mixins.FormMixin;
@@ -1018,7 +1066,7 @@ function createjQueryFormLogicMixin (lib, applib) {
 }
 module.exports = createjQueryFormLogicMixin;
 
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 function createNumericSpinner (lib) {
   'use strict';
 
@@ -1124,7 +1172,7 @@ function createNumericSpinner (lib) {
 }
 module.exports = createNumericSpinner;
 
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 function createRadiosMixin (lib) {
   'use strict';
 
@@ -1252,7 +1300,7 @@ function createRadiosMixin (lib) {
 }
 module.exports = createRadiosMixin;
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 function createTextFromHashMixin (lib) {
   'use strict';
 
@@ -1327,4 +1375,4 @@ function createTextFromHashMixin (lib) {
 }
 module.exports = createTextFromHashMixin;
 
-},{}]},{},[7]);
+},{}]},{},[8]);

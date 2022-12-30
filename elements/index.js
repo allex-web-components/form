@@ -5,6 +5,7 @@ function createElements (execlib, applib, mylib) {
   require('./formcreator')(execlib, applib, mylib.mixins);
   require('./formclickablecreator')(execlib, applib);
   require('./plainhashfieldcreator')(execlib, applib, mylib.mixins);
+  require('./frozenlookupfieldcreator')(execlib, applib, mylib.mixins);
   require('./checkboxfieldcreator')(execlib, applib, mylib.mixins);
 }
 module.exports = createElements;
