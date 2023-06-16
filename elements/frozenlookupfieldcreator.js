@@ -19,7 +19,7 @@ function createFrozenLookupField (execlib, applib, mixins) {
     }
     val = this.readValueFromData(data);
     this.set('value', val);
-    this.set('valid', this.isValueValid(val));
+    this.setValidity(val);
     return ret;
   };
   FrozenLookupFieldElement.prototype.readValueFromData = function (data) {

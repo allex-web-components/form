@@ -3,21 +3,23 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
 
   var lib = execlib.lib,
     CheckBoxElement = applib.getElementType('CheckBoxElement'),
-    TextFromHashMixin = mixins.TextFromHash,
-    DataHolderMixin = mixins.DataHolder,
-    InputHandlerMixin = mixins.InputHandler;
+    FieldBaseMixin = mixins.FieldBase,
+    DataHolderMixin = mixins.DataHolder;
 
  
   function CheckBoxFieldElement (id, options) {
     options = options || {};
     CheckBoxElement.call(this, id, options);
+    FieldBaseMixin.call(this, options);
     DataHolderMixin.call(this, options);
-    this.set('valid', this.isValueValid());
+    this.setValidity();
   }
   lib.inherit(CheckBoxFieldElement, CheckBoxElement);
+  FieldBaseMixin.addMethods(CheckBoxFieldElement);
   DataHolderMixin.addMethods(CheckBoxFieldElement);
   CheckBoxFieldElement.prototype.__cleanUp = function () {
     DataHolderMixin.prototype.destroy.call(this);
+    FieldBaseMixin.prototype.destroy.call(this);
     CheckBoxElement.prototype.__cleanUp.call(this);
   };
   CheckBoxFieldElement.prototype.get_data = function () {
@@ -30,7 +32,7 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
       val = lib.readPropertyFromDotDelimitedString(data, fieldname);
     }
     this.set('checked', !!val);
-    this.set('valid', this.isValueValid(val));
+    this.setValidity(val);
     return true;
   };
   CheckBoxFieldElement.prototype.isValueValid = function (val) {

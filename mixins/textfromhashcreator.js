@@ -42,7 +42,7 @@ function createTextFromHashMixin (lib) {
     this.setDataReceived();
     if (data && fieldname) {
       val = this.readTextValueFromHash(data, fieldname);
-      this.set('valid', this.isValueValid(val));
+      this.setValidity(val);
       return val;
     }
     return null;

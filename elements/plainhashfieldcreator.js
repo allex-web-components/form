@@ -2,19 +2,22 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
   'use strict';
 
   var lib = execlib.lib,
-    FieldBaseElement = applib.getElementType('FieldBaseElement'),
+    WebElement = applib.getElementType('WebElement'),
+    FieldBaseMixin = mixins.FieldBase,
     TextFromHashMixin = mixins.TextFromHash,
     DataHolderMixin = mixins.DataHolder,
     InputHandlerMixin = mixins.InputHandler;
 
   function PlainHashFieldElement (id, options) {
-    FieldBaseElement.call(this, id, options);
+    WebElement.call(this, id, options);
+    FieldBaseMixin.call(this, options);
     TextFromHashMixin.call(this, options);
     DataHolderMixin.call(this, options);
     InputHandlerMixin.call(this, options);
     this.setValidity();
   }
-  lib.inherit(PlainHashFieldElement, FieldBaseElement);
+  lib.inherit(PlainHashFieldElement, WebElement);
+  FieldBaseMixin.addMethods(PlainHashFieldElement);
   TextFromHashMixin.addMethods(PlainHashFieldElement);
   DataHolderMixin.addMethods(PlainHashFieldElement);
   InputHandlerMixin.addMethods(PlainHashFieldElement);
@@ -22,7 +25,8 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
     InputHandlerMixin.prototype.destroy.call(this);
     DataHolderMixin.prototype.destroy.call(this);
     TextFromHashMixin.prototype.destroy.call(this);
-    FieldBaseElement.prototype.__cleanUp.call(this);
+    FieldBaseMixin.prototype.destroy.call(this);
+    WebElement.prototype.__cleanUp.call(this);
   };
   PlainHashFieldElement.prototype.onInputElementKeyUp = PlainHashFieldElement.prototype.onInputElementChange;
   PlainHashFieldElement.prototype.set_value = function (val) {

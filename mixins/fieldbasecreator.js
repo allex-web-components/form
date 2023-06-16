@@ -1,18 +1,13 @@
-function createFieldBase (execlib, applib) {
+function createFieldBaseMixin (lib, mylib) {
   'use strict';
 
-  var lib = execlib.lib,
-    WebElement = applib.getElementType('WebElement');
-
-  function FieldBaseElement (id, options) {
-    WebElement.call(this, id, options);
+  function FieldBaseMixin () {
+    if (!lib.isFunction(this.isValueValid)) {
+      throw new lib.Error('ISVALUEVALID_NOT_IMPLEMENTED', this.constructor.name+' must implement isValueValid');
+    }
   }
-  lib.inherit(FieldBaseElement, WebElement);
-  FieldBaseElement.prototype.__cleanUp = function () {
-    WebElement.prototype.__cleanUp.call(this);
-  };
 
-  FieldBaseElement.prototype.setValidity = function (val) {
+  FieldBaseMixin.prototype.setValidity = function (val) {
     var myvalid;
     try {
       myvalid = evaluateValidity.call(this, val);
@@ -23,6 +18,12 @@ function createFieldBase (execlib, applib) {
     if (this.$element && this.$element.length>0) {
       this.$element[myvalid ? 'removeClass' : 'addClass']('invalid');
     }
+  };
+
+  FieldBaseMixin.addMethods = function (klass) {
+    lib.inheritMethods(klass, FieldBaseMixin
+      , 'setValidity'
+    );
   };
 
   //statics
@@ -37,6 +38,6 @@ function createFieldBase (execlib, applib) {
   };
   //endofstatics
 
-  applib.registerElementType('FieldBaseElement', FieldBaseElement);
+  mylib.FieldBase = FieldBaseMixin;
 }
-module.exports = createFieldBase;
+module.exports = createFieldBaseMixin;

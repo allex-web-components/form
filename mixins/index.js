@@ -14,6 +14,7 @@ function createFormRenderingMixins (execlib, applib) {
       Logic: require('./logiccreator')(lib, applib)
     };
 
+  require('./fieldbasecreator')(lib, ret);
   require('./formcreator')(lib, ret);
   return ret;
 }
