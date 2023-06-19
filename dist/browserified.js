@@ -433,11 +433,16 @@ module.exports = createDataHolder;
 function createFieldBaseMixin (lib, mylib) {
   'use strict';
 
-  function FieldBaseMixin () {
+  function FieldBaseMixin (options) {
     if (!lib.isFunction(this.isValueValid)) {
       throw new lib.Error('ISVALUEVALID_NOT_IMPLEMENTED', this.constructor.name+' must implement isValueValid');
     }
+    this.required = options.required;
+    this.attachListener('changed', 'actual', onActualChanged.bind(this));
   }
+  FieldBaseMixin.prototype.destroy = function () {
+    this.required = null;
+  };
 
   FieldBaseMixin.prototype.setValidity = function (val) {
     var myvalid;
@@ -459,12 +464,17 @@ function createFieldBaseMixin (lib, mylib) {
   };
 
   //statics
+  function onActualChanged (actual) {
+    var val = this.get('value');
+    this.set('value', null);
+    this.set('value', val);
+  }
   function evaluateValidity (val) {
     if (!this.isValueValid(val)) {
       return false;
     }
     if (this.__parent && lib.isFunction(this.__parent.validateFieldNameWithValue)) {
-      return this.__parent.validateFieldNameWithValue(this.getConfigVal('fieldname'), val);
+      return this.__parent.validateFieldNameWithValue(this.getConfigVal('fieldname'), val, this.get('actual'));
     }
     return true;
   };
@@ -656,8 +666,8 @@ function createHashCollectorMixin (lib) {
     :
     'fieldname';
     vldfromchildren = getValidityFromChildren.call(this);
-    //console.log('finally', this.id, 'valid', vldfromchildren, 'with', this.mydata);    
-    this.set('valid', vldfromchildren);
+    //console.log('finally', this.id, 'valid', vldfromchildren, 'with', this.mydata);
+    this.set('valid', lib.isVal(vldfromchildren) ? vldfromchildren : true);
     valsfromchildren = getValuesFromChildren.call(this, fldname);
     /*
     if (vldfromchildren) {
@@ -840,6 +850,9 @@ function createHashCollectorMixin (lib) {
       //console.log('"valid" of', chld, 'is', valid);
       if (!valid) {
         //console.log(chld.id, 'is not valid', valid);
+        if (valid == false && this.validation && this.validation[chld.getConfigVal('fieldname')] && this.validation[chld.getConfigVal('fieldname')].onlywhenactual && !chld.get('actual')) {
+          return;
+        }
         validobj.valid = lib.isVal(valid) ? false : null;
         return;
       }

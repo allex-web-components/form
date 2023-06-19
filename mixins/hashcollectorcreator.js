@@ -73,8 +73,8 @@ function createHashCollectorMixin (lib) {
     :
     'fieldname';
     vldfromchildren = getValidityFromChildren.call(this);
-    //console.log('finally', this.id, 'valid', vldfromchildren, 'with', this.mydata);    
-    this.set('valid', vldfromchildren);
+    //console.log('finally', this.id, 'valid', vldfromchildren, 'with', this.mydata);
+    this.set('valid', lib.isVal(vldfromchildren) ? vldfromchildren : true);
     valsfromchildren = getValuesFromChildren.call(this, fldname);
     /*
     if (vldfromchildren) {
@@ -257,6 +257,9 @@ function createHashCollectorMixin (lib) {
       //console.log('"valid" of', chld, 'is', valid);
       if (!valid) {
         //console.log(chld.id, 'is not valid', valid);
+        if (valid == false && this.validation && this.validation[chld.getConfigVal('fieldname')] && this.validation[chld.getConfigVal('fieldname')].onlywhenactual && !chld.get('actual')) {
+          return;
+        }
         validobj.valid = lib.isVal(valid) ? false : null;
         return;
       }
