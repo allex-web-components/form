@@ -26,13 +26,8 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
     return this.get('checked');
   };
   CheckBoxFieldElement.prototype.set_data = function (data) {
-    var fieldname = this.getConfigVal('hashfield'), val;
-    this.setDataReceived();
-    if (data && fieldname) {
-      val = lib.readPropertyFromDotDelimitedString(data, fieldname);
-    }
-    this.set('checked', !!val);
-    this.setValidity(val);
+    var myvalue = FieldBaseMixin.prototype.set_data.call(this, data);
+    this.set('checked', !!myvalue);
     return true;
   };
   CheckBoxFieldElement.prototype.isValueValid = function (val) {

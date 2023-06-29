@@ -10,8 +10,10 @@ function createHashCollectorMixin (lib) {
     this.hashCollectorListeners = [];
     this.wantsSubmit = this.createBufferableHookCollection(); //new lib.HookCollection();
     this.hardcodedFields = options ? options.hardcoded_fields : null;
+    this.hashCollectorRecheckingChildren = false;
   }
   HashCollectorMixin.prototype.destroy = function () {
+    this.hashCollectorRecheckingChildren = null;
     this.hardcodedFields = null;
     if (this.wantsSubmit) {
       this.wantsSubmit.destroy();
@@ -68,6 +70,10 @@ function createHashCollectorMixin (lib) {
   };
   HashCollectorMixin.prototype.recheckChildren = function () {
     var fldname, vldfromchildren, valsfromchildren;
+    if (this.hashCollectorRecheckingChildren) {
+      return;
+    }
+    this.hashCollectorRecheckingChildren = true;
     fldname = (this.hashCollectorChannels && this.hashCollectorChannels[this.activeHashCollectorChannel])
     ? (this.hashCollectorChannels[this.activeHashCollectorChannel] || 'fieldname')
     :
@@ -83,6 +89,7 @@ function createHashCollectorMixin (lib) {
     console.log(this.id, 'valid', vldfromchildren, valsfromchildren);
     */
     this.set('value', valsfromchildren);
+    this.hashCollectorRecheckingChildren = false;
   };
   HashCollectorMixin.prototype.hookToCollectorValidity = function () {
     var hookvalid = this.getConfigVal('hookvalid');
@@ -94,7 +101,9 @@ function createHashCollectorMixin (lib) {
       this.__children.traverse(chld2mehooker.bind(this));
     }
   };
-
+  HashCollectorMixin.prototype.onChildValueChanged = function (chld, newvalue) {
+    this.recheckChildren();
+  };
 
   HashCollectorMixin.addMethods = function (klass) {
     lib.inheritMethods(klass, HashCollectorMixin
@@ -109,6 +118,7 @@ function createHashCollectorMixin (lib) {
       ,'fireSubmit'
       ,'recheckChildren'
       ,'hookToCollectorValidity'
+      ,'onChildValueChanged'
     );
     HashCollectorMixin.addPostInitialization(klass);
   };
@@ -149,17 +159,8 @@ function createHashCollectorMixin (lib) {
       return;
     }
   }
-  function writepiecewisetodata (data, val, fieldname) {
-    //console.log('writetodata', data, 'val', val[fieldname], 'to', fieldname);
-    writetodata(data, val[fieldname], fieldname);
-    //writetodata(data, lib.readPropertyFromDotDelimitedString(data, fieldname), fieldname);
-  }
-  function writetodata (data, val, fieldname) {
-    data[fieldname] = val;
-    //lib.writePropertyFromDotDelimitedString(data, fieldname, val, true);
-  }
 
-  //static method, "this" matters
+  //statics
   function hookTo (hookvalid, targetname) {
     var target = hookvalid[targetname];
     if (!target) {
@@ -171,8 +172,6 @@ function createHashCollectorMixin (lib) {
     }
     hooker.call(this, targetname, target);
   }
-
-  //static method, "this" matters
   function hooker (targetname, target) {
     var chld = this.getElement(target);
     if (!chld) {
@@ -180,14 +179,12 @@ function createHashCollectorMixin (lib) {
     }
     this.hashCollectorListeners.push(this.attachListener('changed', 'valid', chld.set.bind(chld, targetname)));
   }
-
-  //static method, "this" matters
   function chld2mehooker (chld) {
+    this.hashCollectorListeners.push(chld.attachListener('changed', 'actual', this.recheckChildren.bind(this)));
     this.hashCollectorListeners.push(chld.attachListener('changed', 'valid', this.recheckChildren.bind(this)));
-    this.hashCollectorListeners.push(chld.attachListener('changed', 'value', this.recheckChildren.bind(this)));
+    this.hashCollectorListeners.push(chld.attachListener('changed', 'value', this.onChildValueChanged.bind(this, chld)));
+    chld = null;
   }
-
-  //static method, "this" matters
   function getValuesFromChildren (fldname) {
     var ret = {}, _r = ret, _fn = fldname;
     if (!this.__children) {
@@ -198,8 +195,6 @@ function createHashCollectorMixin (lib) {
     _r = null;
     return ret;
   }
-
-  //static method, "this" matters
   function getValidityFromChildren () {
     var ret, _r;
     if (!this.__children) {
@@ -216,9 +211,7 @@ function createHashCollectorMixin (lib) {
       ret = ret.valid;
     }
     return ret;
-  };
-
-  //static method, "this" matters
+  }
   function validandpristinegetter (validobj, chld) {
     var valid, pristine;
     if (!chld) {
@@ -232,7 +225,7 @@ function createHashCollectorMixin (lib) {
     }
     if (!chld.get('required')) {
       try {
-        if (chld.get('valid')) {
+        if (validateChild.call(this, chld)) {
           validobj.valid = true;
         }
       } catch (e) {
@@ -253,13 +246,10 @@ function createHashCollectorMixin (lib) {
       //console.log('Could not get "pristine" from', chld);
     }
     try {
-      valid = chld.get('valid');
+      valid = validateChild.call(this, chld);
       //console.log('"valid" of', chld, 'is', valid);
       if (!valid) {
         //console.log(chld.id, 'is not valid', valid);
-        if (valid == false && this.validation && this.validation[chld.getConfigVal('fieldname')] && this.validation[chld.getConfigVal('fieldname')].onlywhenactual && !chld.get('actual')) {
-          return;
-        }
         validobj.valid = lib.isVal(valid) ? false : null;
         return;
       }
@@ -268,17 +258,44 @@ function createHashCollectorMixin (lib) {
       //console.log('Could not get "valid" from', chld);
     }
   }
-
+  function validateChild (chld) {
+    var chldfld, myvld, vlderr;
+    if (!this.validation) {
+      return chld.get('valid');
+    }
+    chldfld = chld.getConfigVal('fieldname');
+    if (!chldfld) {
+      return chld.get('valid');
+    }
+    myvld = this.validation[chldfld];
+    if (!myvld) {
+      return chld.get('valid');
+    }
+    vlderr = this.validateFieldNameWithValue(chldfld, chld.get('value'), chld.get('actual'));
+    chld.set('valid', !vlderr);
+    chld.set('tooltip', vlderr);
+    return !vlderr;
+  }
   function maybePropagateActiveHashCollectorChannel (ahcc) {    
     this.__children.traverse(maybeAssignActiveHashCollectorChannel.bind(null, ahcc));
     ahcc = null;
+  }
+  //endof statics
+
+  function writepiecewisetodata (data, val, fieldname) {
+    //console.log('writetodata', data, 'val', val[fieldname], 'to', fieldname);
+    writetodata(data, val[fieldname], fieldname);
+    //writetodata(data, lib.readPropertyFromDotDelimitedString(data, fieldname), fieldname);
+  }
+  function writetodata (data, val, fieldname) {
+    data[fieldname] = val;
+    //lib.writePropertyFromDotDelimitedString(data, fieldname, val, true);
   }
   function maybeAssignActiveHashCollectorChannel (ahcc, chld) {
     if (chld.hashCollectorChannels) {
       chld.set('activeHashCollectorChannel', ahcc);
     }
   }
-
 
   return HashCollectorMixin;
 }

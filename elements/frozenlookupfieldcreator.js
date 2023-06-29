@@ -27,10 +27,10 @@ function createFrozenLookupField (execlib, applib, mixins) {
     valfieldname = this.getConfigVal('hashvaluefield');
     if (data && valfieldname) {
       val = lib.readPropertyFromDotDelimitedString(data, valfieldname);
-      if (lib.isVal(ret)) {
+      if (!lib.isVal(val)) {
         return this.getConfigVal('default_value');
       }
-      return ret;
+      return val;
     }
   };
   

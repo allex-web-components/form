@@ -26,6 +26,8 @@ function createTextFromHashMixin (lib) {
       t = '';
     }
     this.set(this.targetedStateForHashToText(), t);
+    this.doPropertyFromHash(data, 'enabled');
+    this.doPropertyFromHash(data, 'visible');
     return true;
   };
   TextFromHashMixin.prototype.targetedStateForHashToText = function () {

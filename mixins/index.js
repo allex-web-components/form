@@ -16,6 +16,7 @@ function createFormRenderingMixins (execlib, applib) {
 
   require('./fieldbasecreator')(lib, ret);
   require('./formcreator')(lib, ret);
+  require('./formvalidatorcreator')(lib, ret);
   return ret;
 }
 module.exports = createFormRenderingMixins;

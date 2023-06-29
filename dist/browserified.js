@@ -27,13 +27,8 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
     return this.get('checked');
   };
   CheckBoxFieldElement.prototype.set_data = function (data) {
-    var fieldname = this.getConfigVal('hashfield'), val;
-    this.setDataReceived();
-    if (data && fieldname) {
-      val = lib.readPropertyFromDotDelimitedString(data, fieldname);
-    }
-    this.set('checked', !!val);
-    this.setValidity(val);
+    var myvalue = FieldBaseMixin.prototype.set_data.call(this, data);
+    this.set('checked', !!myvalue);
     return true;
   };
   CheckBoxFieldElement.prototype.isValueValid = function (val) {
@@ -63,23 +58,28 @@ function dummyFieldElementCreator (execlib, applib) {
 }
 module.exports = dummyFieldElementCreator;
 },{}],3:[function(require,module,exports){
-function createFormClickable (execlib, applib) {
+function createFormClickable (execlib, applib, mixins) {
   'use strict';
 
   var lib = execlib.lib,
-    ClickableElement = applib.getElementType('ClickableElement');
+    ClickableElement = applib.getElementType('ClickableElement'),
+    FieldBaseMixin = mixins.FieldBase;
 
   function FormClickableElement (id, options) {
     options.fieldname = null;
     ClickableElement.call(this, id, options);
+    FieldBaseMixin.call(this, options);
   }
   lib.inherit(FormClickableElement, ClickableElement);
+  FieldBaseMixin.addMethods(FormClickableElement);
+  FormClickableElement.prototype.__cleanUp = function () {
+    FieldBaseMixin.prototype.destroy.call(this);
+    ClickableElement.prototype.__cleanUp.call(this);
+  };
   FormClickableElement.prototype.get_data = function () {
     return null;
   };
-  FormClickableElement.prototype.set_data = function () {
-    return true;
-  };
+  FormClickableElement.prototype.isValueValid = function () { return true; }
   FormClickableElement.prototype.resetData = lib.dummyFunc;
 
 
@@ -93,15 +93,19 @@ function createFormElement (execlib, applib, mixins) {
 
   var lib = execlib.lib,
     WebElement = applib.getElementType('WebElement'),
-    FormMixin = mixins.Form;
+    FormMixin = mixins.Form,
+    FormValidatorMixin = mixins.FormValidator;
 
   function FormElement (id, options) {
     WebElement.call(this, id, options);
     FormMixin.call(this, options);
+    FormValidatorMixin.call(this, options);
   }
   lib.inherit(FormElement, WebElement);
   FormMixin.addMethods(FormElement);
+  FormValidatorMixin.addMethods(FormElement);
   FormElement.prototype.__cleanUp = function () {
+    FormValidatorMixin.prototype.destroy.call(this);
     FormMixin.prototype.destroy.call(this);
     WebElement.prototype.__cleanUp.call(this);
   };
@@ -118,6 +122,48 @@ function createFormElement (execlib, applib, mixins) {
 module.exports = createFormElement;
 
 },{}],5:[function(require,module,exports){
+function createFormPaneElement (execlib, applib, mixins) {
+  'use strict';
+
+  var lib = execlib.lib;
+
+  var WebElement = applib.getElementType('WebElement'),
+  FieldBaseMixin = mixins.FieldBase;
+  
+  function FormPaneElement (id, options) {
+    WebElement.call(this, id, options);
+    FieldBaseMixin.call(this, options);
+  }
+  lib.inherit(FormPaneElement, WebElement);
+  FieldBaseMixin.addMethods(FormPaneElement);
+  FormPaneElement.prototype.__cleanUp = function () {
+    FieldBaseMixin.prototype.destroy.call(this);
+    WebElement.prototype.__cleanUp.call(this);
+  };
+  FormPaneElement.prototype.set_actual = function (act) {
+    var ret, refs;
+    ret = WebElement.prototype.set_actual.call(this, act);
+    if (ret) {
+      refs = this.getConfigVal('references');
+      if (lib.isArray(refs)) {
+        refs.forEach(setActualOnParentsChild.bind(this, act));
+        act = null;
+      }
+    }
+  };
+  FormPaneElement.prototype.isValueValid = function () { return true; }
+  FormPaneElement.prototype.resetData = lib.dummyFunc;
+
+  function setActualOnParentsChild (chldname, actual) {
+    try {
+      this.__parent.getElement(chldname).set('actual', actual);
+    } catch (e) {}
+  }
+
+  applib.registerElementType('FormPaneElement', FormPaneElement);
+}
+module.exports = createFormPaneElement;
+},{}],6:[function(require,module,exports){
 function createFrozenLookupField (execlib, applib, mixins) {
   'use strict';
 
@@ -147,30 +193,31 @@ function createFrozenLookupField (execlib, applib, mixins) {
     valfieldname = this.getConfigVal('hashvaluefield');
     if (data && valfieldname) {
       val = lib.readPropertyFromDotDelimitedString(data, valfieldname);
-      if (lib.isVal(ret)) {
+      if (!lib.isVal(val)) {
         return this.getConfigVal('default_value');
       }
-      return ret;
+      return val;
     }
   };
   
   applib.registerElementType('FrozenLookupFieldElement', FrozenLookupFieldElement);
 }
 module.exports = createFrozenLookupField;
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 function createElements (execlib, applib, mylib) {
   'use strict';
 
   require('./dummyfieldcreator')(execlib, applib);
   require('./formcreator')(execlib, applib, mylib.mixins);
-  require('./formclickablecreator')(execlib, applib);
+  require('./formpanecreator')(execlib, applib, mylib.mixins);
+  require('./formclickablecreator')(execlib, applib, mylib.mixins);
   require('./plainhashfieldcreator')(execlib, applib, mylib.mixins);
   require('./frozenlookupfieldcreator')(execlib, applib, mylib.mixins);
   require('./checkboxfieldcreator')(execlib, applib, mylib.mixins);
 }
 module.exports = createElements;
 
-},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcreator":4,"./frozenlookupfieldcreator":5,"./plainhashfieldcreator":7}],7:[function(require,module,exports){
+},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcreator":4,"./formpanecreator":5,"./frozenlookupfieldcreator":6,"./plainhashfieldcreator":8}],8:[function(require,module,exports){
 function createPlainHashFieldElement (execlib, applib, mixins) {
   'use strict';
 
@@ -220,7 +267,7 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
 }
 module.exports = createPlainHashFieldElement;
 
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 (function (execlib) {
   'use strict';
 
@@ -237,7 +284,7 @@ module.exports = createPlainHashFieldElement;
   lR.register('allex_formwebcomponent', mylib);
 })(ALLEX);
 
-},{"./elements":6,"./mixins":15}],9:[function(require,module,exports){
+},{"./elements":7,"./mixins":17}],10:[function(require,module,exports){
 function createBitMaskCheckboxesMixin (lib) {
   'use strict';
 
@@ -366,7 +413,7 @@ function createBitMaskCheckboxesMixin (lib) {
 }
 module.exports = createBitMaskCheckboxesMixin;
 
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 function createDataHolder (lib) {
   'use strict';
 
@@ -429,7 +476,7 @@ function createDataHolder (lib) {
 }
 module.exports = createDataHolder;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 function createFieldBaseMixin (lib, mylib) {
   'use strict';
 
@@ -438,10 +485,27 @@ function createFieldBaseMixin (lib, mylib) {
       throw new lib.Error('ISVALUEVALID_NOT_IMPLEMENTED', this.constructor.name+' must implement isValueValid');
     }
     this.required = options.required;
-    this.attachListener('changed', 'actual', onActualChanged.bind(this));
+    this.baseActualListener = this.attachListener('changed', 'actual', onActualChanged.bind(this));
+    this.baseValidListener = this.attachListener('changed', 'valid', onValidChanged.bind(this));
   }
   FieldBaseMixin.prototype.destroy = function () {
+    if(this.baseValidListener) {
+       this.baseValidListener.destroy();
+    }
+    this.baseValidListener = null;
+    if(this.baseActualListener) {
+       this.baseActualListener.destroy();
+    }
+    this.baseActualListener = null;
     this.required = null;
+  };
+
+  FieldBaseMixin.prototype.set_data = function (data) {
+    var val;
+    this.doPropertyFromHash(data, 'actual');
+    val = this.doPropertyFromHash(data, 'value');
+    this.doPropertyFromHash(data, 'enabled');
+    return val;
   };
 
   FieldBaseMixin.prototype.setValidity = function (val) {
@@ -452,14 +516,38 @@ function createFieldBaseMixin (lib, mylib) {
       myvalid = false;
     }
     this.set('valid', myvalid);
-    if (this.$element && this.$element.length>0) {
-      this.$element[myvalid ? 'removeClass' : 'addClass']('invalid');
+  };
+
+  function hashFieldPropertyName (myproperty) {
+    if (myproperty == 'value') {
+      return 'hashfield';
     }
+    return 'hash'+myproperty+'field';
+  }
+
+  FieldBaseMixin.prototype.doPropertyFromHash = function (data, myproperty, valprocessor) {
+    var myfieldname, val, procval;
+    myfieldname = this.getConfigVal(hashFieldPropertyName(myproperty));
+    if (!myfieldname) {
+      return;
+    }
+    val = lib.readPropertyFromDotDelimitedString(data, myfieldname);
+    if (lib.isFunction(valprocessor)) {
+      val = valprocessor(val);
+    }
+    if (myproperty == 'value') {
+      this.setValidity(val);
+    } else {
+      this.set(myproperty, val);
+    }
+    return val;
   };
 
   FieldBaseMixin.addMethods = function (klass) {
     lib.inheritMethods(klass, FieldBaseMixin
+      , 'set_data'
       , 'setValidity'
+      , 'doPropertyFromHash'
     );
   };
 
@@ -469,12 +557,22 @@ function createFieldBaseMixin (lib, mylib) {
     this.set('value', null);
     this.set('value', val);
   }
+  function onValidChanged (valid) {
+    if (this.$element && this.$element.length>0) {
+      this.$element[valid ? 'removeClass' : 'addClass']('invalid');
+    }
+  }
   function evaluateValidity (val) {
+    var vlderr;
     if (!this.isValueValid(val)) {
       return false;
     }
     if (this.__parent && lib.isFunction(this.__parent.validateFieldNameWithValue)) {
-      return this.__parent.validateFieldNameWithValue(this.getConfigVal('fieldname'), val, this.get('actual'));
+      vlderr = this.__parent.validateFieldNameWithValue(this.getConfigVal('fieldname'), val, this.get('actual'));
+      if (vlderr) {
+        this.set('tooltip', vlderr);
+      }
+      return !vlderr;
     }
     return true;
   };
@@ -483,7 +581,7 @@ function createFieldBaseMixin (lib, mylib) {
   mylib.FieldBase = FieldBaseMixin;
 }
 module.exports = createFieldBaseMixin;
-},{}],12:[function(require,module,exports){
+},{}],13:[function(require,module,exports){
 function createFormMixin (lib, mylib) {
   'use strict';
 
@@ -590,7 +688,118 @@ function createFormMixin (lib, mylib) {
 };
 module.exports = createFormMixin;
 
-},{}],13:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
+function createFormValidatorMixin (lib, mylib) {
+  'use strict';
+
+  function possiblyBuildRegExp (obj, val, name) {
+    if (name === 'regex') {
+      if (lib.isString(val)) {
+        obj[name] = new RegExp(val);
+      }
+      if (val && 'object' === typeof val && 'string' in val && 'flags' in val && lib.isString(val.string)) {
+        obj[name] = new RegExp(val.string, val.flags);
+      }
+    }
+  }
+
+  function possiblyBuildRegExps1 (val, name) {
+    if ('object' !== typeof val) {
+      return;
+    }
+    lib.traverseShallow(val, possiblyBuildRegExp.bind(null, val));
+    val = null;
+  }
+
+  function possiblyBuildRegExps (obj) {
+    if (!obj) {
+      return;
+    }
+    lib.traverseShallow(obj, possiblyBuildRegExps1);
+    obj = null;
+  }
+
+  function FormValidatorMixin (options) {
+    this.validation = null;
+    this.confirmationfields = null;
+    this.set('validation', options ? options.validation : null);
+    this.set('confirmationfields', options ? options.confirmationfields : null);
+  }
+  FormValidatorMixin.prototype.destroy = function () {
+    this.confirmationfields = null;
+    this.validation = null;
+  };
+  FormValidatorMixin.prototype.set_validation = function (validation) {
+    var vld = lib.extend({}, validation);
+    possiblyBuildRegExps(vld);
+    this.validation = vld;
+    return true;
+  };
+  FormValidatorMixin.prototype.validateFieldNameWithValue = function (fieldname, value, fieldactual) {
+    var validation = this.validation,
+      confirmationfields = this.confirmationfields,
+      vld, vldresult;
+    if (lib.isVal(value) && confirmationfields && 'object' === typeof confirmationfields && fieldname in confirmationfields) {
+      if (value !== this.hashdata[confirmationfields[fieldname]]) {
+        return 'Confirmation failed!';
+      }
+    }
+    if (!validation) return '';
+    vld = validation[fieldname];
+    if (lib.isArray(vld)) {
+      vldresult = vld.reduce(validateSingleFieldNameWithValue.bind(this, value, fieldactual), '');
+      value = null;
+      fieldactual = null;
+      return vldresult;
+    }
+    return validateSingleFieldNameWithValue.call(this, value, fieldactual, '', vld);
+  };
+  function validateSingleFieldNameWithValue (value, fieldactual, res, vld) {
+    if (res) {
+      return res;
+    }
+    if (!vld) return '';
+    if (vld.onlywhenactual && !fieldactual) {
+      return '';
+    }
+    if (!this.validateValueWithJSON(vld.json_schema, value)) return vld.error || 'Validation failed!';
+    if (!this.validateValueWithRegExp(vld.regex, value)) return vld.error || 'Validation failed!';
+    if (!this.validateValueWithFunction(vld.custom, value)) return vld.error || 'Validation failed!';
+    return '';
+  };
+  FormValidatorMixin.prototype.validateValueWithJSON = function (schema, value) {
+    if (!schema) return true;
+    var result = lib.jsonschema.validate(value, schema);
+    return !result.errors.length;
+  };
+  FormValidatorMixin.prototype.validateValueWithRegExp = function (regexp, value) {
+    if (!regexp) return true;
+    if (!(regexp instanceof RegExp)) return true;
+    var result = regexp.test(value);
+    //console.log('regexp', regexp, 'on', value, '=>', result);
+    return result;
+  };
+  FormValidatorMixin.prototype.validateValueWithFunction = function (f, value) {
+    if (!lib.isFunction (f)) return true;
+    return f(value, this.hashdata, this.get('value'));
+  };
+
+
+  FormValidatorMixin.addMethods = function (klass) {
+    lib.inheritMethods(klass, FormValidatorMixin
+      ,'set_validation'
+      ,'validateFieldNameWithValue'
+      ,'validateValueWithJSON'
+      ,'validateValueWithRegExp'
+      ,'validateValueWithFunction'
+    );
+  };
+
+  mylib.FormValidator = FormValidatorMixin;
+}
+module.exports = createFormValidatorMixin;
+
+},{}],15:[function(require,module,exports){
 function createHashCollectorMixin (lib) {
   'use strict';
 
@@ -603,8 +812,10 @@ function createHashCollectorMixin (lib) {
     this.hashCollectorListeners = [];
     this.wantsSubmit = this.createBufferableHookCollection(); //new lib.HookCollection();
     this.hardcodedFields = options ? options.hardcoded_fields : null;
+    this.hashCollectorRecheckingChildren = false;
   }
   HashCollectorMixin.prototype.destroy = function () {
+    this.hashCollectorRecheckingChildren = null;
     this.hardcodedFields = null;
     if (this.wantsSubmit) {
       this.wantsSubmit.destroy();
@@ -661,6 +872,10 @@ function createHashCollectorMixin (lib) {
   };
   HashCollectorMixin.prototype.recheckChildren = function () {
     var fldname, vldfromchildren, valsfromchildren;
+    if (this.hashCollectorRecheckingChildren) {
+      return;
+    }
+    this.hashCollectorRecheckingChildren = true;
     fldname = (this.hashCollectorChannels && this.hashCollectorChannels[this.activeHashCollectorChannel])
     ? (this.hashCollectorChannels[this.activeHashCollectorChannel] || 'fieldname')
     :
@@ -676,6 +891,7 @@ function createHashCollectorMixin (lib) {
     console.log(this.id, 'valid', vldfromchildren, valsfromchildren);
     */
     this.set('value', valsfromchildren);
+    this.hashCollectorRecheckingChildren = false;
   };
   HashCollectorMixin.prototype.hookToCollectorValidity = function () {
     var hookvalid = this.getConfigVal('hookvalid');
@@ -687,7 +903,9 @@ function createHashCollectorMixin (lib) {
       this.__children.traverse(chld2mehooker.bind(this));
     }
   };
-
+  HashCollectorMixin.prototype.onChildValueChanged = function (chld, newvalue) {
+    this.recheckChildren();
+  };
 
   HashCollectorMixin.addMethods = function (klass) {
     lib.inheritMethods(klass, HashCollectorMixin
@@ -702,6 +920,7 @@ function createHashCollectorMixin (lib) {
       ,'fireSubmit'
       ,'recheckChildren'
       ,'hookToCollectorValidity'
+      ,'onChildValueChanged'
     );
     HashCollectorMixin.addPostInitialization(klass);
   };
@@ -742,17 +961,8 @@ function createHashCollectorMixin (lib) {
       return;
     }
   }
-  function writepiecewisetodata (data, val, fieldname) {
-    //console.log('writetodata', data, 'val', val[fieldname], 'to', fieldname);
-    writetodata(data, val[fieldname], fieldname);
-    //writetodata(data, lib.readPropertyFromDotDelimitedString(data, fieldname), fieldname);
-  }
-  function writetodata (data, val, fieldname) {
-    data[fieldname] = val;
-    //lib.writePropertyFromDotDelimitedString(data, fieldname, val, true);
-  }
 
-  //static method, "this" matters
+  //statics
   function hookTo (hookvalid, targetname) {
     var target = hookvalid[targetname];
     if (!target) {
@@ -764,8 +974,6 @@ function createHashCollectorMixin (lib) {
     }
     hooker.call(this, targetname, target);
   }
-
-  //static method, "this" matters
   function hooker (targetname, target) {
     var chld = this.getElement(target);
     if (!chld) {
@@ -773,14 +981,12 @@ function createHashCollectorMixin (lib) {
     }
     this.hashCollectorListeners.push(this.attachListener('changed', 'valid', chld.set.bind(chld, targetname)));
   }
-
-  //static method, "this" matters
   function chld2mehooker (chld) {
+    this.hashCollectorListeners.push(chld.attachListener('changed', 'actual', this.recheckChildren.bind(this)));
     this.hashCollectorListeners.push(chld.attachListener('changed', 'valid', this.recheckChildren.bind(this)));
-    this.hashCollectorListeners.push(chld.attachListener('changed', 'value', this.recheckChildren.bind(this)));
+    this.hashCollectorListeners.push(chld.attachListener('changed', 'value', this.onChildValueChanged.bind(this, chld)));
+    chld = null;
   }
-
-  //static method, "this" matters
   function getValuesFromChildren (fldname) {
     var ret = {}, _r = ret, _fn = fldname;
     if (!this.__children) {
@@ -791,8 +997,6 @@ function createHashCollectorMixin (lib) {
     _r = null;
     return ret;
   }
-
-  //static method, "this" matters
   function getValidityFromChildren () {
     var ret, _r;
     if (!this.__children) {
@@ -809,9 +1013,7 @@ function createHashCollectorMixin (lib) {
       ret = ret.valid;
     }
     return ret;
-  };
-
-  //static method, "this" matters
+  }
   function validandpristinegetter (validobj, chld) {
     var valid, pristine;
     if (!chld) {
@@ -825,7 +1027,7 @@ function createHashCollectorMixin (lib) {
     }
     if (!chld.get('required')) {
       try {
-        if (chld.get('valid')) {
+        if (validateChild.call(this, chld)) {
           validobj.valid = true;
         }
       } catch (e) {
@@ -846,13 +1048,10 @@ function createHashCollectorMixin (lib) {
       //console.log('Could not get "pristine" from', chld);
     }
     try {
-      valid = chld.get('valid');
+      valid = validateChild.call(this, chld);
       //console.log('"valid" of', chld, 'is', valid);
       if (!valid) {
         //console.log(chld.id, 'is not valid', valid);
-        if (valid == false && this.validation && this.validation[chld.getConfigVal('fieldname')] && this.validation[chld.getConfigVal('fieldname')].onlywhenactual && !chld.get('actual')) {
-          return;
-        }
         validobj.valid = lib.isVal(valid) ? false : null;
         return;
       }
@@ -861,10 +1060,38 @@ function createHashCollectorMixin (lib) {
       //console.log('Could not get "valid" from', chld);
     }
   }
-
+  function validateChild (chld) {
+    var chldfld, myvld, vlderr;
+    if (!this.validation) {
+      return chld.get('valid');
+    }
+    chldfld = chld.getConfigVal('fieldname');
+    if (!chldfld) {
+      return chld.get('valid');
+    }
+    myvld = this.validation[chldfld];
+    if (!myvld) {
+      return chld.get('valid');
+    }
+    vlderr = this.validateFieldNameWithValue(chldfld, chld.get('value'), chld.get('actual'));
+    chld.set('valid', !vlderr);
+    chld.set('tooltip', vlderr||'');
+    return !vlderr;
+  }
   function maybePropagateActiveHashCollectorChannel (ahcc) {    
     this.__children.traverse(maybeAssignActiveHashCollectorChannel.bind(null, ahcc));
     ahcc = null;
+  }
+  //endof statics
+
+  function writepiecewisetodata (data, val, fieldname) {
+    //console.log('writetodata', data, 'val', val[fieldname], 'to', fieldname);
+    writetodata(data, val[fieldname], fieldname);
+    //writetodata(data, lib.readPropertyFromDotDelimitedString(data, fieldname), fieldname);
+  }
+  function writetodata (data, val, fieldname) {
+    data[fieldname] = val;
+    //lib.writePropertyFromDotDelimitedString(data, fieldname, val, true);
   }
   function maybeAssignActiveHashCollectorChannel (ahcc, chld) {
     if (chld.hashCollectorChannels) {
@@ -872,12 +1099,11 @@ function createHashCollectorMixin (lib) {
     }
   }
 
-
   return HashCollectorMixin;
 }
 module.exports = createHashCollectorMixin;
 
-},{}],14:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 function createHashDistributorMixin (lib) {
   'use strict';
 
@@ -919,7 +1145,7 @@ function createHashDistributorMixin (lib) {
 }
 module.exports = createHashDistributorMixin;
 
-},{}],15:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 function createFormRenderingMixins (execlib, applib) {
   'use strict';
 
@@ -938,11 +1164,12 @@ function createFormRenderingMixins (execlib, applib) {
 
   require('./fieldbasecreator')(lib, ret);
   require('./formcreator')(lib, ret);
+  require('./formvalidatorcreator')(lib, ret);
   return ret;
 }
 module.exports = createFormRenderingMixins;
 
-},{"./bitmaskcheckboxescreator":9,"./dataholdercreator":10,"./fieldbasecreator":11,"./formcreator":12,"./hashcollectorcreator":13,"./hashdistributorcreator":14,"./inputhandlercreator":16,"./logiccreator":17,"./numericspinnercreator":18,"./radioscreator":19,"./textfromhashcreator":20}],16:[function(require,module,exports){
+},{"./bitmaskcheckboxescreator":10,"./dataholdercreator":11,"./fieldbasecreator":12,"./formcreator":13,"./formvalidatorcreator":14,"./hashcollectorcreator":15,"./hashdistributorcreator":16,"./inputhandlercreator":18,"./logiccreator":19,"./numericspinnercreator":20,"./radioscreator":21,"./textfromhashcreator":22}],18:[function(require,module,exports){
 function createInputHandlerMixin (lib) {
   'use strict';
 
@@ -1043,7 +1270,7 @@ function createInputHandlerMixin (lib) {
 }
 module.exports = createInputHandlerMixin;
 
-},{}],17:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 function createjQueryFormLogicMixin (lib, applib) {
   'use strict';
   var FormLogicMixin = applib.mixins.FormMixin;
@@ -1130,7 +1357,7 @@ function createjQueryFormLogicMixin (lib, applib) {
 }
 module.exports = createjQueryFormLogicMixin;
 
-},{}],18:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 function createNumericSpinner (lib) {
   'use strict';
 
@@ -1236,7 +1463,7 @@ function createNumericSpinner (lib) {
 }
 module.exports = createNumericSpinner;
 
-},{}],19:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 function createRadiosMixin (lib) {
   'use strict';
 
@@ -1364,7 +1591,7 @@ function createRadiosMixin (lib) {
 }
 module.exports = createRadiosMixin;
 
-},{}],20:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 function createTextFromHashMixin (lib) {
   'use strict';
 
@@ -1393,6 +1620,8 @@ function createTextFromHashMixin (lib) {
       t = '';
     }
     this.set(this.targetedStateForHashToText(), t);
+    this.doPropertyFromHash(data, 'enabled');
+    this.doPropertyFromHash(data, 'visible');
     return true;
   };
   TextFromHashMixin.prototype.targetedStateForHashToText = function () {
@@ -1439,4 +1668,4 @@ function createTextFromHashMixin (lib) {
 }
 module.exports = createTextFromHashMixin;
 
-},{}]},{},[8]);
+},{}]},{},[9]);

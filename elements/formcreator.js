@@ -3,15 +3,19 @@ function createFormElement (execlib, applib, mixins) {
 
   var lib = execlib.lib,
     WebElement = applib.getElementType('WebElement'),
-    FormMixin = mixins.Form;
+    FormMixin = mixins.Form,
+    FormValidatorMixin = mixins.FormValidator;
 
   function FormElement (id, options) {
     WebElement.call(this, id, options);
     FormMixin.call(this, options);
+    FormValidatorMixin.call(this, options);
   }
   lib.inherit(FormElement, WebElement);
   FormMixin.addMethods(FormElement);
+  FormValidatorMixin.addMethods(FormElement);
   FormElement.prototype.__cleanUp = function () {
+    FormValidatorMixin.prototype.destroy.call(this);
     FormMixin.prototype.destroy.call(this);
     WebElement.prototype.__cleanUp.call(this);
   };
