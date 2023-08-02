@@ -9,10 +9,12 @@ function createFormPaneElement (execlib, applib, mixins) {
   function FormPaneElement (id, options) {
     WebElement.call(this, id, options);
     FieldBaseMixin.call(this, options);
+    this.valid = true;
   }
   lib.inherit(FormPaneElement, WebElement);
   FieldBaseMixin.addMethods(FormPaneElement);
   FormPaneElement.prototype.__cleanUp = function () {
+    this.valid = true;
     FieldBaseMixin.prototype.destroy.call(this);
     WebElement.prototype.__cleanUp.call(this);
   };

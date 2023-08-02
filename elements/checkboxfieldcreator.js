@@ -22,6 +22,17 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
     FieldBaseMixin.prototype.destroy.call(this);
     CheckBoxElement.prototype.__cleanUp.call(this);
   };
+  CheckBoxFieldElement.prototype.set_checked = function (chk) {
+    var ret = CheckBoxElement.prototype.set_checked.call(this, chk);
+    if (ret) {
+      this.set('value', !!chk);
+    }
+    return ret;
+  };
+  function valueFromChecked (chk) {
+    if (chk == 'true') return true;
+    if (chk == 'false') return false
+  }
   CheckBoxFieldElement.prototype.get_data = function () {
     return this.get('checked');
   };
@@ -29,6 +40,9 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
     var myvalue = FieldBaseMixin.prototype.set_data.call(this, data);
     this.set('checked', !!myvalue);
     return true;
+  };
+  CheckBoxFieldElement.prototype.get_value = function () {
+    return this.get('checked');
   };
   CheckBoxFieldElement.prototype.isValueValid = function (val) {
     return lib.isBoolean(val);
