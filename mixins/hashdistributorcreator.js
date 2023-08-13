@@ -28,6 +28,12 @@ function createHashDistributorMixin (lib) {
   };
 
   function datasetter (data, chld) {
+    if (!chld) {
+      return;
+    }
+    if ((this.getConfigVal('nonformelements')||[]).indexOf(chld.id)>=0) {
+      return;
+    }
     try {
       chld.set('data', data);
     } catch(e) {

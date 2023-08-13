@@ -42,6 +42,12 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
     }
     return lib.isVal(val) && !!val;
   };
+  PlainHashFieldElement.prototype.get_value = function () {
+    if (this.targetedStateForHashToText()=='value') {
+      return InputHandlerMixin.prototype.get_value.call(this);
+    }
+    return TextFromHashMixin.prototype.get_data.call(this);
+  };
 
   applib.registerElementType('PlainHashFieldElement', PlainHashFieldElement);
 }

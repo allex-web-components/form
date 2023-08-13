@@ -19,7 +19,7 @@ function createDataHolder (lib) {
     this.pristine = true;
     this.dataHolderUnderReset = true;
     if (this.__children) {
-      this.__children.traverse(resetdataer);
+      this.__children.traverse(resetdataer.bind(this));
     }
     this.set('data', this.nullValue);
     this.set('valid', null);
@@ -39,14 +39,6 @@ function createDataHolder (lib) {
   };
   DataHolder.prototype.nullValue = null;
 
-  function resetdataer (chld) {
-    if (!lib.isFunction(chld.resetData)) {
-      console.warn(chld, 'does not have method "resetData"');
-      return;
-    }
-    chld.resetData();
-  }
-
   DataHolder.addMethods = function (klass) {
     lib.inheritMethods(klass, DataHolder
       ,'set_pristine'
@@ -55,6 +47,19 @@ function createDataHolder (lib) {
       ,'nullValue'
     );
   };
+
+  //statics
+  function resetdataer (chld) {
+    if ((this.getConfigVal('nonformelements')||[]).indexOf(chld.id)>=0) {
+      return;
+    }
+    if (!lib.isFunction(chld.resetData)) {
+      console.warn(chld, 'does not have method "resetData"');
+      return;
+    }
+    chld.resetData();
+  }
+  //endof statics
 
   return DataHolder;
 }

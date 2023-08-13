@@ -25,7 +25,7 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
   CheckBoxFieldElement.prototype.set_checked = function (chk) {
     var ret = CheckBoxElement.prototype.set_checked.call(this, chk);
     if (ret) {
-      this.set('value', !!chk);
+      this.fireEvent('value', !!chk);
     }
     return ret;
   };
@@ -41,7 +41,10 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
     this.set('checked', !!myvalue);
     return true;
   };
-  CheckBoxFieldElement.prototype.get_value = function () {
+  CheckBoxFieldElement.prototype.set_value = function (val) {//will never get called
+    return this.set_checked(val);
+  };
+  CheckBoxFieldElement.prototype.get_value = function () {//this correctly reports the 'checked' state vs value, but blocks Settable from setting 'value'
     return this.get('checked');
   };
   CheckBoxFieldElement.prototype.isValueValid = function (val) {

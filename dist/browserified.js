@@ -26,7 +26,7 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
   CheckBoxFieldElement.prototype.set_checked = function (chk) {
     var ret = CheckBoxElement.prototype.set_checked.call(this, chk);
     if (ret) {
-      this.set('value', !!chk);
+      this.fireEvent('value', !!chk);
     }
     return ret;
   };
@@ -42,7 +42,10 @@ function createCheckBoxFieldElement (execlib, applib, mixins) {
     this.set('checked', !!myvalue);
     return true;
   };
-  CheckBoxFieldElement.prototype.get_value = function () {
+  CheckBoxFieldElement.prototype.set_value = function (val) {//will never get called
+    return this.set_checked(val);
+  };
+  CheckBoxFieldElement.prototype.get_value = function () {//this correctly reports the 'checked' state vs value, but blocks Settable from setting 'value'
     return this.get('checked');
   };
   CheckBoxFieldElement.prototype.isValueValid = function (val) {
@@ -102,26 +105,82 @@ function createFormClickable (execlib, applib, mixins) {
 module.exports = createFormClickable;
 
 },{}],4:[function(require,module,exports){
+function createFormCollectionElement (execlib, applib, mixins) {
+  'use strict';
+
+  var lib = execlib.lib,
+    WebElement = applib.getElementType('WebElement'),
+    FormCollectionMixin = mixins.FormCollection,
+    FormValidatorMixin = mixins.FormValidator;
+
+  
+  function FormCollectionElement (id, options) {
+    WebElement.call(this, id, options);
+    FormCollectionMixin.call(this, options);
+  }
+  lib.inherit(FormCollectionElement, WebElement);
+  FormCollectionMixin.addMethods(FormCollectionElement);
+  FormCollectionElement.prototype.__cleanUp = function () {
+    FormCollectionMixin.prototype.destroy.call(this);
+    WebElement.prototype.__cleanUp.call(this);
+  };
+  FormCollectionElement.prototype.staticEnvironmentDescriptor = function (myname) {
+    return {
+    };
+  };
+
+  FormCollectionElement.prototype.actualEnvironmentDescriptor = function (myname) {
+    return FormCollectionMixin.prototype.actualEnvironmentDescriptor.call(this, myname);
+  };
+
+  applib.registerElementType('FormCollectionElement', FormCollectionElement);
+}
+module.exports = createFormCollectionElement;
+},{}],5:[function(require,module,exports){
 function createFormElement (execlib, applib, mixins) {
   'use strict';
 
   var lib = execlib.lib,
     WebElement = applib.getElementType('WebElement'),
     FormMixin = mixins.Form,
+    FormCollectionMixin = mixins.FormCollection,
     FormValidatorMixin = mixins.FormValidator;
+
+  var HashDistributorMixin = mixins.HashDistributor,
+    HashCollectorMixin = mixins.HashCollector;
 
   function FormElement (id, options) {
     WebElement.call(this, id, options);
     FormMixin.call(this, options);
+    FormCollectionMixin.call(this, options);
     FormValidatorMixin.call(this, options);
   }
   lib.inherit(FormElement, WebElement);
   FormMixin.addMethods(FormElement);
+  FormCollectionMixin.addMethods(FormElement);
   FormValidatorMixin.addMethods(FormElement);
   FormElement.prototype.__cleanUp = function () {
     FormValidatorMixin.prototype.destroy.call(this);
+    FormCollectionMixin.prototype.destroy.call(this);
     FormMixin.prototype.destroy.call(this);
     WebElement.prototype.__cleanUp.call(this);
+  };
+
+  FormElement.prototype.set_data = function (data) {
+    var ret = FormMixin.prototype.set_data.call(this, data);
+    FormCollectionMixin.prototype.set_data.call(this, data);
+    return ret;
+  };
+  FormElement.prototype.get_data = function () {
+    return HashDistributorMixin.prototype.get_data.call(this); //this is what FormMixin would do
+  };
+  FormElement.prototype.set_value = function (value) {
+    var ret = FormMixin.prototype.set_value.call(this, value);
+    FormCollectionMixin.prototype.set_value.call(this, value);
+    return ret;
+  };
+  FormElement.prototype.get_value = function () {
+    return HashCollectorMixin.prototype.get_value.call(this); //this is what FormMixin would do
   };
 
   FormElement.prototype.initializeFormForPossibleDataAssignment = function () {
@@ -135,7 +194,7 @@ function createFormElement (execlib, applib, mixins) {
 }
 module.exports = createFormElement;
 
-},{}],5:[function(require,module,exports){
+},{}],6:[function(require,module,exports){
 function createFormPaneElement (execlib, applib, mixins) {
   'use strict';
 
@@ -179,7 +238,7 @@ function createFormPaneElement (execlib, applib, mixins) {
   applib.registerElementType('FormPaneElement', FormPaneElement);
 }
 module.exports = createFormPaneElement;
-},{}],6:[function(require,module,exports){
+},{}],7:[function(require,module,exports){
 function createFrozenLookupField (execlib, applib, mixins) {
   'use strict';
 
@@ -219,21 +278,54 @@ function createFrozenLookupField (execlib, applib, mixins) {
   applib.registerElementType('FrozenLookupFieldElement', FrozenLookupFieldElement);
 }
 module.exports = createFrozenLookupField;
-},{}],7:[function(require,module,exports){
-function createElements (execlib, applib, mylib) {
+},{}],8:[function(require,module,exports){
+function createHashFields (execlib, applib, mixins) {
   'use strict';
 
-  require('./dummyfieldcreator')(execlib, applib);
-  require('./formcreator')(execlib, applib, mylib.mixins);
-  require('./formpanecreator')(execlib, applib, mylib.mixins);
-  require('./formclickablecreator')(execlib, applib, mylib.mixins);
-  require('./plainhashfieldcreator')(execlib, applib, mylib.mixins);
-  require('./frozenlookupfieldcreator')(execlib, applib, mylib.mixins);
-  require('./checkboxfieldcreator')(execlib, applib, mylib.mixins);
+  require('./plaincreator')(execlib, applib, mixins);
+  require('./numbercreator')(execlib, applib, mixins);
 }
-module.exports = createElements;
+module.exports = createHashFields;
+},{"./numbercreator":9,"./plaincreator":10}],9:[function(require,module,exports){
+function createNumberHashFieldElement (execlib, applib, mixins) {
+  'use strict';
+  var lib = execlib.lib;
 
-},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcreator":4,"./formpanecreator":5,"./frozenlookupfieldcreator":6,"./plainhashfieldcreator":8}],8:[function(require,module,exports){
+  var PlainHashFieldElement = applib.getElementType('PlainHashFieldElement');
+  
+  function NumberHashFieldElement (id, options) {
+    PlainHashFieldElement.call(this, id, options);
+    this.autoNumeric = null;
+  }
+  lib.inherit(NumberHashFieldElement, PlainHashFieldElement);
+  NumberHashFieldElement.prototype.__cleanUp = function () {
+    if (this.autoNumeric) {
+      this.autoNumeric.remove();
+      this.autoNumeric.detach();
+    }
+    this.autoNumeric = null;
+    PlainHashFieldElement.prototype.__cleanUp.call(this);
+  };
+
+  NumberHashFieldElement.prototype.startNumberHashFieldElement = function () {
+    this.$element.attr('type', 'text');
+    this.autoNumeric = new AutoNumeric(this.$element[0], this.getConfigVal('autonumeric')||{});
+  };
+
+  NumberHashFieldElement.prototype.get_value = function () {
+    if (this.value==null) {
+      return null;
+    }
+    return this.autoNumeric ? this.autoNumeric.getNumber() : null;
+  };
+  
+  NumberHashFieldElement.prototype.postInitializationMethodNames = PlainHashFieldElement.prototype.postInitializationMethodNames.concat(['startNumberHashFieldElement']);
+
+  applib.registerElementType('NumberHashFieldElement', NumberHashFieldElement);
+
+}
+module.exports = createNumberHashFieldElement;
+},{}],10:[function(require,module,exports){
 function createPlainHashFieldElement (execlib, applib, mixins) {
   'use strict';
 
@@ -278,12 +370,34 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
     }
     return lib.isVal(val) && !!val;
   };
+  PlainHashFieldElement.prototype.get_value = function () {
+    if (this.targetedStateForHashToText()=='value') {
+      return InputHandlerMixin.prototype.get_value.call(this);
+    }
+    return TextFromHashMixin.prototype.get_data.call(this);
+  };
 
   applib.registerElementType('PlainHashFieldElement', PlainHashFieldElement);
 }
 module.exports = createPlainHashFieldElement;
 
-},{}],9:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
+function createElements (execlib, applib, mylib) {
+  'use strict';
+
+  require('./dummyfieldcreator')(execlib, applib);
+  require('./formcreator')(execlib, applib, mylib.mixins);
+  require('./formpanecreator')(execlib, applib, mylib.mixins);
+  require('./formclickablecreator')(execlib, applib, mylib.mixins);
+  require('./hashfield')(execlib, applib, mylib.mixins);
+  require('./frozenlookupfieldcreator')(execlib, applib, mylib.mixins);
+  require('./checkboxfieldcreator')(execlib, applib, mylib.mixins);
+
+  require('./formcollectioncreator')(execlib, applib, mylib.mixins);
+}
+module.exports = createElements;
+
+},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcollectioncreator":4,"./formcreator":5,"./formpanecreator":6,"./frozenlookupfieldcreator":7,"./hashfield":8}],12:[function(require,module,exports){
 (function (execlib) {
   'use strict';
 
@@ -300,7 +414,7 @@ module.exports = createPlainHashFieldElement;
   lR.register('allex_formwebcomponent', mylib);
 })(ALLEX);
 
-},{"./elements":7,"./mixins":17}],10:[function(require,module,exports){
+},{"./elements":11,"./mixins":21}],13:[function(require,module,exports){
 function createBitMaskCheckboxesMixin (lib) {
   'use strict';
 
@@ -429,7 +543,7 @@ function createBitMaskCheckboxesMixin (lib) {
 }
 module.exports = createBitMaskCheckboxesMixin;
 
-},{}],11:[function(require,module,exports){
+},{}],14:[function(require,module,exports){
 function createDataHolder (lib) {
   'use strict';
 
@@ -451,7 +565,7 @@ function createDataHolder (lib) {
     this.pristine = true;
     this.dataHolderUnderReset = true;
     if (this.__children) {
-      this.__children.traverse(resetdataer);
+      this.__children.traverse(resetdataer.bind(this));
     }
     this.set('data', this.nullValue);
     this.set('valid', null);
@@ -471,14 +585,6 @@ function createDataHolder (lib) {
   };
   DataHolder.prototype.nullValue = null;
 
-  function resetdataer (chld) {
-    if (!lib.isFunction(chld.resetData)) {
-      console.warn(chld, 'does not have method "resetData"');
-      return;
-    }
-    chld.resetData();
-  }
-
   DataHolder.addMethods = function (klass) {
     lib.inheritMethods(klass, DataHolder
       ,'set_pristine'
@@ -488,11 +594,24 @@ function createDataHolder (lib) {
     );
   };
 
+  //statics
+  function resetdataer (chld) {
+    if ((this.getConfigVal('nonformelements')||[]).indexOf(chld.id)>=0) {
+      return;
+    }
+    if (!lib.isFunction(chld.resetData)) {
+      console.warn(chld, 'does not have method "resetData"');
+      return;
+    }
+    chld.resetData();
+  }
+  //endof statics
+
   return DataHolder;
 }
 module.exports = createDataHolder;
 
-},{}],12:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 function createFieldBaseMixin (lib, mylib) {
   'use strict';
 
@@ -597,7 +716,89 @@ function createFieldBaseMixin (lib, mylib) {
   mylib.FieldBase = FieldBaseMixin;
 }
 module.exports = createFieldBaseMixin;
-},{}],13:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
+function createFormCollectionMixin (lib, mylib) {
+  'use strict';
+
+  function FormCollectionMixin (options) {
+    this.formCollectionValue = null;
+    this.formCollectionData = null;
+  }
+  FormCollectionMixin.prototype.destroy = function () {
+    this.formCollectionData = null;
+    this.formCollectionValue = null;
+  };
+  FormCollectionMixin.prototype.set_value = function (val) {
+    if (this.formCollectionValue == val) {
+      return false;
+    }
+    this.formCollectionValue = val;
+    return true;
+  };
+  FormCollectionMixin.prototype.get_value = function () {
+    return this.formCollectionValue;
+  };
+  FormCollectionMixin.prototype.set_data = function (data) {
+    if (this.formCollectionData == data) {
+      return false;
+    }
+    this.formCollectionData = data;
+    (this.getConfigVal('forms')||[]).forEach(set_dataer.bind(this, data));
+    data = null;
+    return true;
+  };
+  FormCollectionMixin.prototype.get_data = function () {
+    return this.formCollectionData;
+  };
+  FormCollectionMixin.prototype.onAnySubFormValueChanged = function () {
+    this.set('value', lib.extend.apply(lib, [{}, this.value].concat(Array.prototype.slice.call(arguments))));
+  };
+
+  FormCollectionMixin.addMethods = function (klass) {
+    lib.inheritMethods(klass, FormCollectionMixin
+      , 'set_value'
+      , 'get_value'
+      , 'set_data'
+      , 'get_data'
+      , 'onAnySubFormValueChanged'
+    );
+  };
+
+  //have to be called explicitly
+  FormCollectionMixin.prototype.actualEnvironmentDescriptor = function (myname) {
+    var ret = {
+      logic: [{
+        triggers: (this.getConfigVal('forms')||[]).map(formvaluetriggerer.bind(null, myname)).join(','),
+        handler: this.onAnySubFormValueChanged.bind(this)
+      }]
+    };
+    myname = null;
+    return ret;
+  }
+  //endof have to be called explicitly
+
+  //statics
+  function set_dataer (data, formname) {
+    try {
+      console.log(this.id, 'setting', data, 'to', formname);
+      this.getElement(formname).set('data', data);
+    }
+    catch (e) {
+      console.error(e);
+    }
+  }
+  //endof statics
+
+  //helpers
+  function formvaluetriggerer (myname, formname) {
+    return 'element.'+myname+'.'+formname+':value';
+  }
+  //endof helpers
+
+  mylib.FormCollection = FormCollectionMixin;
+}
+module.exports = createFormCollectionMixin;
+},{}],17:[function(require,module,exports){
 function createFormMixin (lib, mylib) {
   'use strict';
 
@@ -704,7 +905,7 @@ function createFormMixin (lib, mylib) {
 };
 module.exports = createFormMixin;
 
-},{}],14:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 function createFormValidatorMixin (lib, mylib) {
   'use strict';
 
@@ -815,7 +1016,7 @@ function createFormValidatorMixin (lib, mylib) {
 }
 module.exports = createFormValidatorMixin;
 
-},{}],15:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 function createHashCollectorMixin (lib) {
   'use strict';
 
@@ -1119,7 +1320,7 @@ function createHashCollectorMixin (lib) {
 }
 module.exports = createHashCollectorMixin;
 
-},{}],16:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 function createHashDistributorMixin (lib) {
   'use strict';
 
@@ -1150,6 +1351,12 @@ function createHashDistributorMixin (lib) {
   };
 
   function datasetter (data, chld) {
+    if (!chld) {
+      return;
+    }
+    if ((this.getConfigVal('nonformelements')||[]).indexOf(chld.id)>=0) {
+      return;
+    }
     try {
       chld.set('data', data);
     } catch(e) {
@@ -1161,7 +1368,7 @@ function createHashDistributorMixin (lib) {
 }
 module.exports = createHashDistributorMixin;
 
-},{}],17:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 function createFormRenderingMixins (execlib, applib) {
   'use strict';
 
@@ -1180,12 +1387,13 @@ function createFormRenderingMixins (execlib, applib) {
 
   require('./fieldbasecreator')(lib, ret);
   require('./formcreator')(lib, ret);
+  require('./formcollectioncreator')(lib, ret);
   require('./formvalidatorcreator')(lib, ret);
   return ret;
 }
 module.exports = createFormRenderingMixins;
 
-},{"./bitmaskcheckboxescreator":10,"./dataholdercreator":11,"./fieldbasecreator":12,"./formcreator":13,"./formvalidatorcreator":14,"./hashcollectorcreator":15,"./hashdistributorcreator":16,"./inputhandlercreator":18,"./logiccreator":19,"./numericspinnercreator":20,"./radioscreator":21,"./textfromhashcreator":22}],18:[function(require,module,exports){
+},{"./bitmaskcheckboxescreator":13,"./dataholdercreator":14,"./fieldbasecreator":15,"./formcollectioncreator":16,"./formcreator":17,"./formvalidatorcreator":18,"./hashcollectorcreator":19,"./hashdistributorcreator":20,"./inputhandlercreator":22,"./logiccreator":23,"./numericspinnercreator":24,"./radioscreator":25,"./textfromhashcreator":26}],22:[function(require,module,exports){
 function createInputHandlerMixin (lib) {
   'use strict';
 
@@ -1194,13 +1402,24 @@ function createInputHandlerMixin (lib) {
     this.valueChanged = this.createBufferableHookCollection();
     this.onInputElementKeyUper = this.onInputElementKeyUp.bind(this);
     this.onInputElementChanger = this.onInputElementChange.bind(this);
+    this.onInputElementFocuser = this.onInputElementFocus.bind(this);
+    this.onInputElementBlurer = this.onInputElementBlur.bind(this);
+    this.isInputFocused = null;
+    this.valueWhileInFocus = null;
   }
   InputHandlerMixin.prototype.destroy = function () {
     var ie = this.findTheInputElement();
-    if (ie && this.onInputElementChanger && this.onInputElementKeyUper) {
+    if (ie && this.onInputElementChanger && this.onInputElementKeyUper
+      && this.onInputElementFocuser && this.onInputElementBlurer) {
+      ie.off('blur', this.onInputElementBlurer);
+      ie.off('focus', this.onInputElementFocuser);
       ie.off('change', this.onInputElementChanger);
       ie.off('keyup', this.onInputElementKeyUper);
     }
+    this.valueWhileInFocus = null;
+    this.isInputFocused = null;
+    this.onInputElementBlurer = null;
+    this.onInputElementFocuser = null;
     this.onInputElementChanger = null;
     this.onInputElementKeyUper = null;
     if (this.valueChanged) {
@@ -1216,12 +1435,21 @@ function createInputHandlerMixin (lib) {
     }
     ie.on('change', this.onInputElementChanger);
     ie.on('keyup', this.onInputElementKeyUper);
+    ie.on('focus', this.onInputElementFocuser);
+    ie.on('blur', this.onInputElementBlurer);
     this.setTheInputElementValue(this.value);
   };
   InputHandlerMixin.prototype.onInputElementKeyUp = function () {
   };
   InputHandlerMixin.prototype.onInputElementChange = function () {
     this.set('value', this.getTheInputElementValue());
+  };
+  InputHandlerMixin.prototype.onInputElementFocus = function () {
+    this.isInputFocused = true;
+    this.valueWhileInFocus = this.get('value');
+  };
+  InputHandlerMixin.prototype.onInputElementBlur = function () {
+    this.isInputFocused = false;
   };
   InputHandlerMixin.prototype.setTheInputElementValue = function (val) {
     var ie = this.findTheInputElement();
@@ -1249,7 +1477,9 @@ function createInputHandlerMixin (lib) {
       return false;
     }
     this.value = val;
-    this.setTheInputElementValue(val);
+    if (!this.isInputFocused) {
+      this.setTheInputElementValue(val);
+    }
     this.valueChanged.fire(val);
     return true;
   };
@@ -1272,6 +1502,8 @@ function createInputHandlerMixin (lib) {
       ,'startListeningToInputElement'
       ,'onInputElementKeyUp'
       ,'onInputElementChange'
+      ,'onInputElementFocus'
+      ,'onInputElementBlur'
       ,'findTheInputElement'
       ,'setTheInputElementValue'
       ,'getTheInputElementValue'
@@ -1286,7 +1518,7 @@ function createInputHandlerMixin (lib) {
 }
 module.exports = createInputHandlerMixin;
 
-},{}],19:[function(require,module,exports){
+},{}],23:[function(require,module,exports){
 function createjQueryFormLogicMixin (lib, applib) {
   'use strict';
   var FormLogicMixin = applib.mixins.FormMixin;
@@ -1373,7 +1605,7 @@ function createjQueryFormLogicMixin (lib, applib) {
 }
 module.exports = createjQueryFormLogicMixin;
 
-},{}],20:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 function createNumericSpinner (lib) {
   'use strict';
 
@@ -1479,7 +1711,7 @@ function createNumericSpinner (lib) {
 }
 module.exports = createNumericSpinner;
 
-},{}],21:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 function createRadiosMixin (lib) {
   'use strict';
 
@@ -1607,7 +1839,7 @@ function createRadiosMixin (lib) {
 }
 module.exports = createRadiosMixin;
 
-},{}],22:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 function createTextFromHashMixin (lib) {
   'use strict';
 
@@ -1684,4 +1916,4 @@ function createTextFromHashMixin (lib) {
 }
 module.exports = createTextFromHashMixin;
 
-},{}]},{},[9]);
+},{}]},{},[12]);

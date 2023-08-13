@@ -6,13 +6,24 @@ function createInputHandlerMixin (lib) {
     this.valueChanged = this.createBufferableHookCollection();
     this.onInputElementKeyUper = this.onInputElementKeyUp.bind(this);
     this.onInputElementChanger = this.onInputElementChange.bind(this);
+    this.onInputElementFocuser = this.onInputElementFocus.bind(this);
+    this.onInputElementBlurer = this.onInputElementBlur.bind(this);
+    this.isInputFocused = null;
+    this.valueWhileInFocus = null;
   }
   InputHandlerMixin.prototype.destroy = function () {
     var ie = this.findTheInputElement();
-    if (ie && this.onInputElementChanger && this.onInputElementKeyUper) {
+    if (ie && this.onInputElementChanger && this.onInputElementKeyUper
+      && this.onInputElementFocuser && this.onInputElementBlurer) {
+      ie.off('blur', this.onInputElementBlurer);
+      ie.off('focus', this.onInputElementFocuser);
       ie.off('change', this.onInputElementChanger);
       ie.off('keyup', this.onInputElementKeyUper);
     }
+    this.valueWhileInFocus = null;
+    this.isInputFocused = null;
+    this.onInputElementBlurer = null;
+    this.onInputElementFocuser = null;
     this.onInputElementChanger = null;
     this.onInputElementKeyUper = null;
     if (this.valueChanged) {
@@ -28,12 +39,21 @@ function createInputHandlerMixin (lib) {
     }
     ie.on('change', this.onInputElementChanger);
     ie.on('keyup', this.onInputElementKeyUper);
+    ie.on('focus', this.onInputElementFocuser);
+    ie.on('blur', this.onInputElementBlurer);
     this.setTheInputElementValue(this.value);
   };
   InputHandlerMixin.prototype.onInputElementKeyUp = function () {
   };
   InputHandlerMixin.prototype.onInputElementChange = function () {
     this.set('value', this.getTheInputElementValue());
+  };
+  InputHandlerMixin.prototype.onInputElementFocus = function () {
+    this.isInputFocused = true;
+    this.valueWhileInFocus = this.get('value');
+  };
+  InputHandlerMixin.prototype.onInputElementBlur = function () {
+    this.isInputFocused = false;
   };
   InputHandlerMixin.prototype.setTheInputElementValue = function (val) {
     var ie = this.findTheInputElement();
@@ -61,7 +81,9 @@ function createInputHandlerMixin (lib) {
       return false;
     }
     this.value = val;
-    this.setTheInputElementValue(val);
+    if (!this.isInputFocused) {
+      this.setTheInputElementValue(val);
+    }
     this.valueChanged.fire(val);
     return true;
   };
@@ -84,6 +106,8 @@ function createInputHandlerMixin (lib) {
       ,'startListeningToInputElement'
       ,'onInputElementKeyUp'
       ,'onInputElementChange'
+      ,'onInputElementFocus'
+      ,'onInputElementBlur'
       ,'findTheInputElement'
       ,'setTheInputElementValue'
       ,'getTheInputElementValue'

@@ -8,10 +8,8 @@
     ]
   },
   "additionaltargets": {
-  },
-  "dependencies": {
     "js": [
-      "allex:jqueryelements:lib"
+      ["dist", "autoNumeric.min.js"]
     ]
   },
   "protoboard": {
