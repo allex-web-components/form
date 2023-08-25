@@ -18,12 +18,12 @@ function createFormCollectionElement (execlib, applib, mixins) {
     WebElement.prototype.__cleanUp.call(this);
   };
   FormCollectionElement.prototype.staticEnvironmentDescriptor = function (myname) {
-    return {
-    };
+    return FormCollectionMixin.prototype.staticEnvironmentDescriptor.call(this, myname);
   };
 
   FormCollectionElement.prototype.actualEnvironmentDescriptor = function (myname) {
-    return FormCollectionMixin.prototype.actualEnvironmentDescriptor.call(this, myname);
+    return {
+    };
   };
 
   applib.registerElementType('FormCollectionElement', FormCollectionElement);

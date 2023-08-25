@@ -125,12 +125,12 @@ function createFormCollectionElement (execlib, applib, mixins) {
     WebElement.prototype.__cleanUp.call(this);
   };
   FormCollectionElement.prototype.staticEnvironmentDescriptor = function (myname) {
-    return {
-    };
+    return FormCollectionMixin.prototype.staticEnvironmentDescriptor.call(this, myname);
   };
 
   FormCollectionElement.prototype.actualEnvironmentDescriptor = function (myname) {
-    return FormCollectionMixin.prototype.actualEnvironmentDescriptor.call(this, myname);
+    return {
+    };
   };
 
   applib.registerElementType('FormCollectionElement', FormCollectionElement);
@@ -765,7 +765,7 @@ function createFormCollectionMixin (lib, mylib) {
   };
 
   //have to be called explicitly
-  FormCollectionMixin.prototype.actualEnvironmentDescriptor = function (myname) {
+  FormCollectionMixin.prototype.staticEnvironmentDescriptor = function (myname) {
     var ret = {
       logic: [{
         triggers: (this.getConfigVal('forms')||[]).map(formvaluetriggerer.bind(null, myname)).join(','),

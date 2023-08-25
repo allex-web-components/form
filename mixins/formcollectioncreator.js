@@ -46,7 +46,7 @@ function createFormCollectionMixin (lib, mylib) {
   };
 
   //have to be called explicitly
-  FormCollectionMixin.prototype.actualEnvironmentDescriptor = function (myname) {
+  FormCollectionMixin.prototype.staticEnvironmentDescriptor = function (myname) {
     var ret = {
       logic: [{
         triggers: (this.getConfigVal('forms')||[]).map(formvaluetriggerer.bind(null, myname)).join(','),
