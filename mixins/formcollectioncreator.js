@@ -33,6 +33,7 @@ function createFormCollectionMixin (lib, mylib) {
   };
   FormCollectionMixin.prototype.onAnySubFormValueChanged = function () {
     this.set('value', lib.extend.apply(lib, [{}, this.value].concat(Array.prototype.slice.call(arguments))));
+    //console.log(this.id, 'onAnySubFormValueChanged', arguments, '=>', this.get_data('value'));
   };
 
   FormCollectionMixin.addMethods = function (klass) {
@@ -61,7 +62,7 @@ function createFormCollectionMixin (lib, mylib) {
   //statics
   function set_dataer (data, formname) {
     try {
-      console.log(this.id, 'setting', data, 'to', formname);
+      //console.log(this.id, 'setting', data, 'to', formname);
       this.getElement(formname).set('data', data);
     }
     catch (e) {
