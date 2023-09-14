@@ -249,7 +249,7 @@ function createHashCollectorMixin (lib) {
       valid = validateChild.call(this, chld);
       //console.log('"valid" of', chld, 'is', valid);
       if (!valid) {
-        //console.log(chld.id, 'is not valid', valid);
+        //console.log(chld.id, 'is not valid', valid); //UNCOMMENT THIS TO FIND OUT WHICH FIELD IS INVALID
         validobj.valid = lib.isVal(valid) ? false : null;
         return;
       }
