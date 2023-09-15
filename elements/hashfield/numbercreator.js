@@ -22,12 +22,25 @@ function createNumberHashFieldElement (execlib, applib, mixins) {
     this.$element.attr('type', 'text');
     this.autoNumeric = new AutoNumeric(this.$element[0], this.getConfigVal('autonumeric')||{});
   };
-
   NumberHashFieldElement.prototype.get_value = function () {
     if (this.value==null) {
       return null;
     }
     return this.autoNumeric ? this.autoNumeric.getNumber() : null;
+  };
+  NumberHashFieldElement.prototype.isValueValid = function (anytypeval) {
+    var val;
+    if (!this.get('required')) {
+      return true;
+    }
+    val = parseFloat(anytypeval);
+    if (!lib.isNumber(val)) {
+      return false;
+    }
+    if (this.getConfigVal('formulavalidation')) {
+      return eval(this.getConfigVal('formulavalidation').replace('NUMBER', val));
+    }
+    return true;
   };
   
   NumberHashFieldElement.prototype.postInitializationMethodNames = PlainHashFieldElement.prototype.postInitializationMethodNames.concat(['startNumberHashFieldElement']);
