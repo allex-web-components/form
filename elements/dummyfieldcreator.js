@@ -11,6 +11,9 @@ function dummyFieldElementCreator (execlib, applib) {
   DummyFieldElement.prototype.__cleanUp = function () {
     BasicElement.prototype.__cleanUp.call(this);
   };
+  DummyFieldElement.prototype.set_data = function () {
+    return true;
+  };
   DummyFieldElement.prototype.resetData = lib.dummyFunc;
   
   applib.registerElementType('DummyFieldElement', DummyFieldElement);
