@@ -4,8 +4,10 @@ function createFormCollectionMixin (lib, mylib) {
   function FormCollectionMixin (options) {
     this.formCollectionValue = null;
     this.formCollectionData = null;
+    this.valid = false;
   }
   FormCollectionMixin.prototype.destroy = function () {
+    this.valid = null;
     this.formCollectionData = null;
     this.formCollectionValue = null;
   };
@@ -35,6 +37,11 @@ function createFormCollectionMixin (lib, mylib) {
     this.set('value', lib.extend.apply(lib, [{}, this.value].concat(Array.prototype.slice.call(arguments))));
     //console.log(this.id, 'onAnySubFormValueChanged', arguments, '=>', this.get_data('value'));
   };
+  FormCollectionMixin.prototype.onAnySubFormValidChanged = function () {
+    var myargs = Array.prototype.slice.call(arguments);
+    this.set('valid', myargs.every(booler));
+    //console.log(this.id, 'onAnySubFormValueChanged', arguments, '=>', this.get_data('value'));
+  };
 
   FormCollectionMixin.addMethods = function (klass) {
     lib.inheritMethods(klass, FormCollectionMixin
@@ -43,6 +50,7 @@ function createFormCollectionMixin (lib, mylib) {
       , 'set_data'
       , 'get_data'
       , 'onAnySubFormValueChanged'
+      , 'onAnySubFormValidChanged'
     );
   };
 
@@ -52,6 +60,9 @@ function createFormCollectionMixin (lib, mylib) {
       logic: [{
         triggers: (this.getConfigVal('forms')||[]).map(formvaluetriggerer.bind(null, myname)).join(','),
         handler: this.onAnySubFormValueChanged.bind(this)
+      },{
+        triggers: (this.getConfigVal('forms')||[]).map(formvalidtriggerer.bind(null, myname)).join(','),
+        handler: this.onAnySubFormValidChanged.bind(this)
       }]
     };
     myname = null;
@@ -74,6 +85,12 @@ function createFormCollectionMixin (lib, mylib) {
   //helpers
   function formvaluetriggerer (myname, formname) {
     return 'element.'+myname+'.'+formname+':value';
+  }
+  function formvalidtriggerer (myname, formname) {
+    return 'element.'+myname+'.'+formname+':valid';
+  }
+  function booler (thingy) {
+    return !!thingy;
   }
   //endof helpers
 
