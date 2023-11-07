@@ -19,7 +19,7 @@ function createDataHolder (lib) {
     this.pristine = true;
     this.dataHolderUnderReset = true;
     if (this.__children) {
-      this.__children.traverse(resetdataer.bind(this));
+      this.__children.reduce(resetdataer, {nonformelements: this.getConfigVal('nonformelements')||[]});
     }
     this.set('data', this.nullValue);
     this.set('valid', null);
@@ -48,18 +48,17 @@ function createDataHolder (lib) {
     );
   };
 
-  //statics
-  function resetdataer (chld) {
-    if ((this.getConfigVal('nonformelements')||[]).indexOf(chld.id)>=0) {
-      return;
+  function resetdataer (res, chld) {
+    if (res.nonformelements.indexOf(chld.id)>=0) {
+      return res;
     }
     if (!lib.isFunction(chld.resetData)) {
       console.warn(chld, 'does not have method "resetData"');
-      return;
+      return res;
     }
     chld.resetData();
+    return res;
   }
-  //endof statics
 
   return DataHolder;
 }

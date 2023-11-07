@@ -15,8 +15,7 @@ function createHashDistributorMixin (lib) {
       return;
     }
     this.hashdata = data;
-    this.__children.traverse(datasetter.bind(this, data));
-    data = null;
+    this.__children.reduce(datasetter, {data: data, nonformelements: this.getConfigVal('nonformelements')||[]});
     return true;
   };
 
@@ -27,18 +26,19 @@ function createHashDistributorMixin (lib) {
     );
   };
 
-  function datasetter (data, chld) {
+  function datasetter (res, chld) {
     if (!chld) {
-      return;
+      return res;
     }
-    if ((this.getConfigVal('nonformelements')||[]).indexOf(chld.id)>=0) {
-      return;
+    if (res.nonformelements.indexOf(chld.id)>=0) {
+      return res;
     }
     try {
-      chld.set('data', data);
+      chld.set('data', res.data);
     } catch(e) {
       //console.warn(this.id, 'could not set data on', chld.constructor.name, chld.id);//, e);
     }
+    return res;
   }
 
   return HashDistributorMixin;

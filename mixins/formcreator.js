@@ -29,7 +29,7 @@ function createFormMixin (lib, mylib) {
     }
   };
   FormMixin.prototype.set_data = function (data) {
-    var ret = true;
+    var ret = true, ci;
     this.settingdata = true;
     this.set('initiallyvalid', null);
     this.set('valid', null);
@@ -40,8 +40,12 @@ function createFormMixin (lib, mylib) {
       ret = HashDistributorMixin.prototype.set_data.call(this, data);
     }
     this.recheckChildren();
+    ci = this.get('changedinternally');
     this.set('changedinternally', false);
     this.settingdata = false;
+    if (ci) {
+      this.fireEvent('value', this.get('value'));
+    }
     return ret;
   };
   FormMixin.prototype.set_value = function (value) {
@@ -56,7 +60,7 @@ function createFormMixin (lib, mylib) {
       this.set('changedinternally', ci);
       hd = null;
     }
-    return ret;
+    return !this.settingdata && ret;
   };
 
   function changedpiesewise (hash, val, name) {
@@ -73,7 +77,7 @@ function createFormMixin (lib, mylib) {
   FormMixin.prototype.onChangedInternallyProc = function (chld, ci) {
     var v = this.get('valid');
     chld.set('enabled', v&&ci);
-  }
+  };
 
   FormMixin.addMethods = function (klass) {
     HashDistributorMixin.addMethods(klass);

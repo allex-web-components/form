@@ -581,7 +581,7 @@ function createDataHolder (lib) {
     this.pristine = true;
     this.dataHolderUnderReset = true;
     if (this.__children) {
-      this.__children.traverse(resetdataer.bind(this));
+      this.__children.reduce(resetdataer, {nonformelements: this.getConfigVal('nonformelements')||[]});
     }
     this.set('data', this.nullValue);
     this.set('valid', null);
@@ -610,18 +610,17 @@ function createDataHolder (lib) {
     );
   };
 
-  //statics
-  function resetdataer (chld) {
-    if ((this.getConfigVal('nonformelements')||[]).indexOf(chld.id)>=0) {
-      return;
+  function resetdataer (res, chld) {
+    if (res.nonformelements.indexOf(chld.id)>=0) {
+      return res;
     }
     if (!lib.isFunction(chld.resetData)) {
       console.warn(chld, 'does not have method "resetData"');
-      return;
+      return res;
     }
     chld.resetData();
+    return res;
   }
-  //endof statics
 
   return DataHolder;
 }
@@ -864,7 +863,7 @@ function createFormMixin (lib, mylib) {
     }
   };
   FormMixin.prototype.set_data = function (data) {
-    var ret = true;
+    var ret = true, ci;
     this.settingdata = true;
     this.set('initiallyvalid', null);
     this.set('valid', null);
@@ -875,8 +874,12 @@ function createFormMixin (lib, mylib) {
       ret = HashDistributorMixin.prototype.set_data.call(this, data);
     }
     this.recheckChildren();
+    ci = this.get('changedinternally');
     this.set('changedinternally', false);
     this.settingdata = false;
+    if (ci) {
+      this.fireEvent('value', this.get('value'));
+    }
     return ret;
   };
   FormMixin.prototype.set_value = function (value) {
@@ -891,7 +894,7 @@ function createFormMixin (lib, mylib) {
       this.set('changedinternally', ci);
       hd = null;
     }
-    return ret;
+    return !this.settingdata && ret;
   };
 
   function changedpiesewise (hash, val, name) {
@@ -908,7 +911,7 @@ function createFormMixin (lib, mylib) {
   FormMixin.prototype.onChangedInternallyProc = function (chld, ci) {
     var v = this.get('valid');
     chld.set('enabled', v&&ci);
-  }
+  };
 
   FormMixin.addMethods = function (klass) {
     HashDistributorMixin.addMethods(klass);
@@ -1180,28 +1183,27 @@ function createHashCollectorMixin (lib) {
       klass.prototype.postInitializationMethodNames.concat(['hookToCollectorValidity']);
   };
 
-  function datagetter (fldname, data, chld) {
-    var fieldname = chld.getConfigVal(fldname),
+  function datagetter (res, chld) {
+    var fldname = res.fldname, data = res.data,
+      fieldname = chld.getConfigVal(fldname),      
       val;
     if (lib.isUndef(fieldname)) {
       //console.warn('Child', chld.constructor.name, chld.id, 'has no fieldname');
-      return;
+      return res;
     }
     if (fieldname === null) {
       //this chld has no fields to give
-      return;
+      return res;
     }
     try {
       val = chld.get('value');
       if (lib.isArray(fieldname)) {
         if (!(lib.isVal(val) && 'object' === typeof val)) {
-          return;
+          return res;
         }
         //console.log('traversing', fieldname, 'with val', val);
-        fieldname.forEach(writepiecewisetodata.bind(null, data, val));
-        data = null;
-        val = null;
-        return;
+        fieldname.reduce(writepiecewisetodata, {data: data, val:val});
+        return res;
       }
       writetodata(data, val, fieldname);
     } catch (e) {
@@ -1209,8 +1211,8 @@ function createHashCollectorMixin (lib) {
       console.warn('Could not get "value" from', chld);
       console.warn(e);
       */
-      return;
     }
+    return res;
   }
 
   //statics
@@ -1239,25 +1241,18 @@ function createHashCollectorMixin (lib) {
     chld = null;
   }
   function getValuesFromChildren (fldname) {
-    var ret = {}, _r = ret, _fn = fldname;
     if (!this.__children) {
-      return ret;
+      return {};
     }
-    this.__children.traverse(datagetter.bind(null, _fn, _r));
-    _fn = null;
-    _r = null;
-    return ret;
+    return this.__children.reduce(datagetter, {fldname: fldname, data: {}}).data;
   }
   function getValidityFromChildren () {
-    var ret, _r;
+    var ret;
     if (!this.__children) {
       return false;
     }
-    ret = {valid: null, anypristine: false};
-    _r = ret;
-    this.__children.traverse(validandpristinegetter.bind(this, _r));
+    ret = this.__children.reduce(validandpristinegetter, {valid: null, anypristine: false});
     //console.log(this.id, 'valid', ret.valid, 'any pristine', ret.anypristine);
-    _r = null;
     if (ret.anypristine) {
       ret = void 0;
     } else {
@@ -1268,13 +1263,13 @@ function createHashCollectorMixin (lib) {
   function validandpristinegetter (validobj, chld) {
     var valid, pristine;
     if (!chld) {
-      return;
+      return validobj;
     }
     if (validobj.anypristine===true) {
-      return;
+      return validobj;
     }
     if (validobj.valid===false) {
-      return;
+      return validobj;
     }
     if (!chld.get('required')) {
       try {
@@ -1284,14 +1279,14 @@ function createHashCollectorMixin (lib) {
       } catch (e) {
         //console.log('Could not get "valid" from', chld);
       }
-      return;
+      return validobj;
     }
     try {
       pristine = chld.get('pristine');
       if (pristine) {
         //console.log(chld.id, 'is pristine');
         validobj.anypristine = true;
-        return;
+        return validobj;
       } else {
         //console.log(chld.id, 'is NOT pristine');
       }
@@ -1304,12 +1299,13 @@ function createHashCollectorMixin (lib) {
       if (!valid) {
         //console.log(chld.id, 'is not valid', valid); //UNCOMMENT THIS TO FIND OUT WHICH FIELD IS INVALID
         validobj.valid = lib.isVal(valid) ? false : null;
-        return;
+        return validobj;
       }
       validobj.valid = true;
     } catch (e) {
       //console.log('Could not get "valid" from', chld);
     }
+    return validobj;
   }
   function validateChild (chld) {
     var chldfld, myvld, vlderr;
@@ -1330,15 +1326,15 @@ function createHashCollectorMixin (lib) {
     return !vlderr;
   }
   function maybePropagateActiveHashCollectorChannel (ahcc) {    
-    this.__children.traverse(maybeAssignActiveHashCollectorChannel.bind(null, ahcc));
-    ahcc = null;
+    this.__children.reduce(maybeAssignActiveHashCollectorChannel, ahcc);
   }
   //endof statics
 
-  function writepiecewisetodata (data, val, fieldname) {
-    //console.log('writetodata', data, 'val', val[fieldname], 'to', fieldname);
-    writetodata(data, val[fieldname], fieldname);
+  function writepiecewisetodata (res, fieldname) {
+    console.log('writetodata', data, 'val', val[fieldname], 'to', fieldname);
+    writetodata(res.data, res.val[fieldname], fieldname);
     //writetodata(data, lib.readPropertyFromDotDelimitedString(data, fieldname), fieldname);
+    return res;
   }
   function writetodata (data, val, fieldname) {
     data[fieldname] = val;
@@ -1348,6 +1344,7 @@ function createHashCollectorMixin (lib) {
     if (chld.hashCollectorChannels) {
       chld.set('activeHashCollectorChannel', ahcc);
     }
+    return ahcc;
   }
 
   return HashCollectorMixin;
@@ -1372,8 +1369,7 @@ function createHashDistributorMixin (lib) {
       return;
     }
     this.hashdata = data;
-    this.__children.traverse(datasetter.bind(this, data));
-    data = null;
+    this.__children.reduce(datasetter, {data: data, nonformelements: this.getConfigVal('nonformelements')||[]});
     return true;
   };
 
@@ -1384,18 +1380,19 @@ function createHashDistributorMixin (lib) {
     );
   };
 
-  function datasetter (data, chld) {
+  function datasetter (res, chld) {
     if (!chld) {
-      return;
+      return res;
     }
-    if ((this.getConfigVal('nonformelements')||[]).indexOf(chld.id)>=0) {
-      return;
+    if (res.nonformelements.indexOf(chld.id)>=0) {
+      return res;
     }
     try {
-      chld.set('data', data);
+      chld.set('data', res.data);
     } catch(e) {
       //console.warn(this.id, 'could not set data on', chld.constructor.name, chld.id);//, e);
     }
+    return res;
   }
 
   return HashDistributorMixin;
