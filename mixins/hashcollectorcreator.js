@@ -209,6 +209,9 @@ function createHashCollectorMixin (lib) {
     if (!chld) {
       return validobj;
     }
+    if (!chld.get('actual')) {
+      return validobj;
+    }
     if (validobj.anypristine===true) {
       return validobj;
     }
