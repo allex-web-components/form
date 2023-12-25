@@ -80,7 +80,7 @@ function createFieldBaseMixin (lib, mylib) {
   }
   function onValidChanged (valid) {
     if (this.$element && this.$element.length>0) {
-      this.$element[valid ? 'removeClass' : 'addClass']('invalid');
+      this.$element[(!valid && this.getConfigVal('required'))? 'addClass' : 'removeClass']('invalid');
     }
   }
   function evaluateValidity (val) {
