@@ -42,7 +42,11 @@ function createNumberHashFieldElement (execlib, applib, mixins) {
     }
     return true;
   };
-  
+  NumberHashFieldElement.prototype.actualEnvironmentDescriptor = function (myname) {
+    this.setValidity(this.get('value'));
+    return lib.extendWithConcat(PlainHashFieldElement.prototype.actualEnvironmentDescriptor.call(this, myname)||{}, {
+    });
+  };
   NumberHashFieldElement.prototype.postInitializationMethodNames = PlainHashFieldElement.prototype.postInitializationMethodNames.concat(['startNumberHashFieldElement']);
 
   applib.registerElementType('NumberHashFieldElement', NumberHashFieldElement);
