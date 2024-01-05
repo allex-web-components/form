@@ -14,7 +14,7 @@ function createFormPaneElement (execlib, applib, mixins) {
   lib.inherit(FormPaneElement, WebElement);
   FieldBaseMixin.addMethods(FormPaneElement);
   FormPaneElement.prototype.__cleanUp = function () {
-    this.valid = true;
+    this.valid = null;
     FieldBaseMixin.prototype.destroy.call(this);
     WebElement.prototype.__cleanUp.call(this);
   };

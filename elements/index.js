@@ -8,6 +8,7 @@ function createElements (execlib, applib, mylib) {
   require('./hashfield')(execlib, applib, mylib.mixins);
   require('./frozenlookupfieldcreator')(execlib, applib, mylib.mixins);
   require('./checkboxfieldcreator')(execlib, applib, mylib.mixins);
+  require('./formfieldcreator')(execlib, applib, mylib.mixins);
 
   require('./formcollectioncreator')(execlib, applib, mylib.mixins);
 }

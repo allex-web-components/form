@@ -79,6 +79,38 @@ function createFormMixin (lib, mylib) {
     chld.set('enabled', v&&ci);
   };
 
+  //not in addMethods
+  FormMixin.prototype.actualEnvironmentDescriptor = function (myname) {
+    var monitorFuncForActual = this.getConfigVal('monitorfuncforactual');
+    var logic = [];
+    this.ranTheFunc = false;
+    if (monitorFuncForActual) {
+      logic.push({
+        triggers: '.>'+monitorFuncForActual,
+        references: 'element.'+myname,
+        handler: function (me, func) {
+          if (!func) {
+            return;
+          }
+          if (func.running) {
+            me.ranTheFunc = true;
+            return;
+          }
+          if (func.result == null && func.error == null) {
+            return;
+          }
+          if (me.ranTheFunc) {
+            me.ranTheFunc = false;
+            me.set('actual', false);
+          }
+        }
+      });
+    };
+    return {
+      logic: logic
+    };
+  };
+
   FormMixin.addMethods = function (klass) {
     HashDistributorMixin.addMethods(klass);
     HashCollectorMixin.addMethods(klass);

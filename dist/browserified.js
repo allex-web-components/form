@@ -157,12 +157,14 @@ function createFormElement (execlib, applib, mixins) {
     FormMixin.call(this, options);
     FormCollectionMixin.call(this, options);
     FormValidatorMixin.call(this, options);
+    this.ranTheFunc = false;
   }
   lib.inherit(FormElement, WebElement);
   FormMixin.addMethods(FormElement);
   FormCollectionMixin.addMethods(FormElement);
   FormValidatorMixin.addMethods(FormElement);
   FormElement.prototype.__cleanUp = function () {
+    this.ranTheFunc = null;
     FormValidatorMixin.prototype.destroy.call(this);
     FormCollectionMixin.prototype.destroy.call(this);
     FormMixin.prototype.destroy.call(this);
@@ -185,6 +187,15 @@ function createFormElement (execlib, applib, mixins) {
   FormElement.prototype.get_value = function () {
     return HashCollectorMixin.prototype.get_value.call(this); //this is what FormMixin would do
   };
+  FormElement.prototype.actualEnvironmentDescriptor = function (myname) {
+    return lib.extendWithConcat(
+      WebElement.prototype.actualEnvironmentDescriptor.call(this, myname)||{}, 
+      FormMixin.prototype.actualEnvironmentDescriptor.call(this, myname)||{}, 
+      {
+      }
+    );
+  };
+
 
   FormElement.prototype.initializeFormForPossibleDataAssignment = function () {
     if (this.getConfigVal('data')) {
@@ -198,6 +209,55 @@ function createFormElement (execlib, applib, mixins) {
 module.exports = createFormElement;
 
 },{}],6:[function(require,module,exports){
+function createFormField (execlib, applib, mixins) {
+  'use strict';
+
+  var lib = execlib.lib;
+  var FieldBaseMixin = mixins.FieldBase;
+
+  var FormElement = applib.getElementType('FormElement');
+  
+  function FormFieldElement (id, options) {
+    options = options || {};
+    //options.default_markup = options.default_markup || createMarkup(options.markup);
+    FormElement.call(this, id, options);
+    FieldBaseMixin.call(this, options);
+  }
+  lib.inherit(FormFieldElement, FormElement);
+  FieldBaseMixin.addMethods(FormFieldElement);
+  FormFieldElement.prototype.__cleanUp = function () {
+    FieldBaseMixin.prototype.destroy.call(this);
+    FormElement.prototype.__cleanUp.call(this);
+  };
+  FormFieldElement.prototype.staticEnvironmentDescriptor = function (myname) {
+    return lib.extendWithConcat(FormElement.prototype.staticEnvironmentDescriptor.call(this, myname)||{}, {
+    });
+  };
+  FormFieldElement.prototype.actualEnvironmentDescriptor = function (myname) {
+    return lib.extendWithConcat(FormElement.prototype.actualEnvironmentDescriptor.call(this, myname)||{}, {
+    });
+  };
+  FormFieldElement.prototype.set_data = function (data) {
+    return FormElement.prototype.set_data.call(this, FieldBaseMixin.prototype.set_data.call(this, data));
+  };
+  FormFieldElement.prototype.isValueValid = function (val) {
+    return this.__children.reduce(childvalider, {nonformelements: this.getConfigVal('nonformelements')||[], val: val, res: true}).res;
+  };
+  function childvalider (res, chld) {
+    if (!res.res) {
+      return res;
+    }
+    if (res.nonformelements.indexOf(chld.id)>=0) {
+      return res;
+    }
+    res.res = res.res&&chld.isValueValid(res.val);
+    return res;
+  }
+  
+  applib.registerElementType('FormFieldElement', FormFieldElement);
+}
+module.exports = createFormField;
+},{}],7:[function(require,module,exports){
 function createFormPaneElement (execlib, applib, mixins) {
   'use strict';
 
@@ -214,7 +274,7 @@ function createFormPaneElement (execlib, applib, mixins) {
   lib.inherit(FormPaneElement, WebElement);
   FieldBaseMixin.addMethods(FormPaneElement);
   FormPaneElement.prototype.__cleanUp = function () {
-    this.valid = true;
+    this.valid = null;
     FieldBaseMixin.prototype.destroy.call(this);
     WebElement.prototype.__cleanUp.call(this);
   };
@@ -241,7 +301,7 @@ function createFormPaneElement (execlib, applib, mixins) {
   applib.registerElementType('FormPaneElement', FormPaneElement);
 }
 module.exports = createFormPaneElement;
-},{}],7:[function(require,module,exports){
+},{}],8:[function(require,module,exports){
 function createFrozenLookupField (execlib, applib, mixins) {
   'use strict';
 
@@ -281,7 +341,7 @@ function createFrozenLookupField (execlib, applib, mixins) {
   applib.registerElementType('FrozenLookupFieldElement', FrozenLookupFieldElement);
 }
 module.exports = createFrozenLookupField;
-},{}],8:[function(require,module,exports){
+},{}],9:[function(require,module,exports){
 function createHashFields (execlib, applib, mixins) {
   'use strict';
 
@@ -289,7 +349,7 @@ function createHashFields (execlib, applib, mixins) {
   require('./numbercreator')(execlib, applib, mixins);
 }
 module.exports = createHashFields;
-},{"./numbercreator":9,"./plaincreator":10}],9:[function(require,module,exports){
+},{"./numbercreator":10,"./plaincreator":11}],10:[function(require,module,exports){
 function createNumberHashFieldElement (execlib, applib, mixins) {
   'use strict';
   var lib = execlib.lib;
@@ -345,7 +405,7 @@ function createNumberHashFieldElement (execlib, applib, mixins) {
 
 }
 module.exports = createNumberHashFieldElement;
-},{}],10:[function(require,module,exports){
+},{}],11:[function(require,module,exports){
 function createPlainHashFieldElement (execlib, applib, mixins) {
   'use strict';
 
@@ -401,7 +461,7 @@ function createPlainHashFieldElement (execlib, applib, mixins) {
 }
 module.exports = createPlainHashFieldElement;
 
-},{}],11:[function(require,module,exports){
+},{}],12:[function(require,module,exports){
 function createElements (execlib, applib, mylib) {
   'use strict';
 
@@ -412,12 +472,13 @@ function createElements (execlib, applib, mylib) {
   require('./hashfield')(execlib, applib, mylib.mixins);
   require('./frozenlookupfieldcreator')(execlib, applib, mylib.mixins);
   require('./checkboxfieldcreator')(execlib, applib, mylib.mixins);
+  require('./formfieldcreator')(execlib, applib, mylib.mixins);
 
   require('./formcollectioncreator')(execlib, applib, mylib.mixins);
 }
 module.exports = createElements;
 
-},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcollectioncreator":4,"./formcreator":5,"./formpanecreator":6,"./frozenlookupfieldcreator":7,"./hashfield":8}],12:[function(require,module,exports){
+},{"./checkboxfieldcreator":1,"./dummyfieldcreator":2,"./formclickablecreator":3,"./formcollectioncreator":4,"./formcreator":5,"./formfieldcreator":6,"./formpanecreator":7,"./frozenlookupfieldcreator":8,"./hashfield":9}],13:[function(require,module,exports){
 (function (execlib) {
   'use strict';
 
@@ -434,7 +495,7 @@ module.exports = createElements;
   lR.register('allex_formwebcomponent', mylib);
 })(ALLEX);
 
-},{"./elements":11,"./mixins":21}],13:[function(require,module,exports){
+},{"./elements":12,"./mixins":22}],14:[function(require,module,exports){
 function createBitMaskCheckboxesMixin (lib) {
   'use strict';
 
@@ -563,7 +624,7 @@ function createBitMaskCheckboxesMixin (lib) {
 }
 module.exports = createBitMaskCheckboxesMixin;
 
-},{}],14:[function(require,module,exports){
+},{}],15:[function(require,module,exports){
 function createDataHolder (lib) {
   'use strict';
 
@@ -630,7 +691,7 @@ function createDataHolder (lib) {
 }
 module.exports = createDataHolder;
 
-},{}],15:[function(require,module,exports){
+},{}],16:[function(require,module,exports){
 function createFieldBaseMixin (lib, mylib) {
   'use strict';
 
@@ -735,7 +796,7 @@ function createFieldBaseMixin (lib, mylib) {
   mylib.FieldBase = FieldBaseMixin;
 }
 module.exports = createFieldBaseMixin;
-},{}],16:[function(require,module,exports){
+},{}],17:[function(require,module,exports){
 function createFormCollectionMixin (lib, mylib) {
   'use strict';
 
@@ -835,7 +896,7 @@ function createFormCollectionMixin (lib, mylib) {
   mylib.FormCollection = FormCollectionMixin;
 }
 module.exports = createFormCollectionMixin;
-},{}],17:[function(require,module,exports){
+},{}],18:[function(require,module,exports){
 function createFormMixin (lib, mylib) {
   'use strict';
 
@@ -917,6 +978,38 @@ function createFormMixin (lib, mylib) {
     chld.set('enabled', v&&ci);
   };
 
+  //not in addMethods
+  FormMixin.prototype.actualEnvironmentDescriptor = function (myname) {
+    var monitorFuncForActual = this.getConfigVal('monitorfuncforactual');
+    var logic = [];
+    this.ranTheFunc = false;
+    if (monitorFuncForActual) {
+      logic.push({
+        triggers: '.>'+monitorFuncForActual,
+        references: 'element.'+myname,
+        handler: function (me, func) {
+          if (!func) {
+            return;
+          }
+          if (func.running) {
+            me.ranTheFunc = true;
+            return;
+          }
+          if (func.result == null && func.error == null) {
+            return;
+          }
+          if (me.ranTheFunc) {
+            me.ranTheFunc = false;
+            me.set('actual', false);
+          }
+        }
+      });
+    };
+    return {
+      logic: logic
+    };
+  };
+
   FormMixin.addMethods = function (klass) {
     HashDistributorMixin.addMethods(klass);
     HashCollectorMixin.addMethods(klass);
@@ -946,7 +1039,7 @@ function createFormMixin (lib, mylib) {
 };
 module.exports = createFormMixin;
 
-},{}],18:[function(require,module,exports){
+},{}],19:[function(require,module,exports){
 function createFormValidatorMixin (lib, mylib) {
   'use strict';
 
@@ -1057,7 +1150,7 @@ function createFormValidatorMixin (lib, mylib) {
 }
 module.exports = createFormValidatorMixin;
 
-},{}],19:[function(require,module,exports){
+},{}],20:[function(require,module,exports){
 function createHashCollectorMixin (lib) {
   'use strict';
 
@@ -1358,7 +1451,7 @@ function createHashCollectorMixin (lib) {
 }
 module.exports = createHashCollectorMixin;
 
-},{}],20:[function(require,module,exports){
+},{}],21:[function(require,module,exports){
 function createHashDistributorMixin (lib) {
   'use strict';
 
@@ -1406,7 +1499,7 @@ function createHashDistributorMixin (lib) {
 }
 module.exports = createHashDistributorMixin;
 
-},{}],21:[function(require,module,exports){
+},{}],22:[function(require,module,exports){
 function createFormRenderingMixins (execlib, applib) {
   'use strict';
 
@@ -1431,7 +1524,7 @@ function createFormRenderingMixins (execlib, applib) {
 }
 module.exports = createFormRenderingMixins;
 
-},{"./bitmaskcheckboxescreator":13,"./dataholdercreator":14,"./fieldbasecreator":15,"./formcollectioncreator":16,"./formcreator":17,"./formvalidatorcreator":18,"./hashcollectorcreator":19,"./hashdistributorcreator":20,"./inputhandlercreator":22,"./logiccreator":23,"./numericspinnercreator":24,"./radioscreator":25,"./textfromhashcreator":26}],22:[function(require,module,exports){
+},{"./bitmaskcheckboxescreator":14,"./dataholdercreator":15,"./fieldbasecreator":16,"./formcollectioncreator":17,"./formcreator":18,"./formvalidatorcreator":19,"./hashcollectorcreator":20,"./hashdistributorcreator":21,"./inputhandlercreator":23,"./logiccreator":24,"./numericspinnercreator":25,"./radioscreator":26,"./textfromhashcreator":27}],23:[function(require,module,exports){
 function createInputHandlerMixin (lib) {
   'use strict';
 
@@ -1556,7 +1649,7 @@ function createInputHandlerMixin (lib) {
 }
 module.exports = createInputHandlerMixin;
 
-},{}],23:[function(require,module,exports){
+},{}],24:[function(require,module,exports){
 function createjQueryFormLogicMixin (lib, applib) {
   'use strict';
   var FormLogicMixin = applib.mixins.FormMixin;
@@ -1643,7 +1736,7 @@ function createjQueryFormLogicMixin (lib, applib) {
 }
 module.exports = createjQueryFormLogicMixin;
 
-},{}],24:[function(require,module,exports){
+},{}],25:[function(require,module,exports){
 function createNumericSpinner (lib) {
   'use strict';
 
@@ -1749,7 +1842,7 @@ function createNumericSpinner (lib) {
 }
 module.exports = createNumericSpinner;
 
-},{}],25:[function(require,module,exports){
+},{}],26:[function(require,module,exports){
 function createRadiosMixin (lib) {
   'use strict';
 
@@ -1877,7 +1970,7 @@ function createRadiosMixin (lib) {
 }
 module.exports = createRadiosMixin;
 
-},{}],26:[function(require,module,exports){
+},{}],27:[function(require,module,exports){
 function createTextFromHashMixin (lib) {
   'use strict';
 
@@ -1954,4 +2047,4 @@ function createTextFromHashMixin (lib) {
 }
 module.exports = createTextFromHashMixin;
 
-},{}]},{},[12]);
+},{}]},{},[13]);

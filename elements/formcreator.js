@@ -15,12 +15,14 @@ function createFormElement (execlib, applib, mixins) {
     FormMixin.call(this, options);
     FormCollectionMixin.call(this, options);
     FormValidatorMixin.call(this, options);
+    this.ranTheFunc = false;
   }
   lib.inherit(FormElement, WebElement);
   FormMixin.addMethods(FormElement);
   FormCollectionMixin.addMethods(FormElement);
   FormValidatorMixin.addMethods(FormElement);
   FormElement.prototype.__cleanUp = function () {
+    this.ranTheFunc = null;
     FormValidatorMixin.prototype.destroy.call(this);
     FormCollectionMixin.prototype.destroy.call(this);
     FormMixin.prototype.destroy.call(this);
@@ -43,6 +45,15 @@ function createFormElement (execlib, applib, mixins) {
   FormElement.prototype.get_value = function () {
     return HashCollectorMixin.prototype.get_value.call(this); //this is what FormMixin would do
   };
+  FormElement.prototype.actualEnvironmentDescriptor = function (myname) {
+    return lib.extendWithConcat(
+      WebElement.prototype.actualEnvironmentDescriptor.call(this, myname)||{}, 
+      FormMixin.prototype.actualEnvironmentDescriptor.call(this, myname)||{}, 
+      {
+      }
+    );
+  };
+
 
   FormElement.prototype.initializeFormForPossibleDataAssignment = function () {
     if (this.getConfigVal('data')) {
