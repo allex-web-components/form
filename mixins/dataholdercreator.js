@@ -35,6 +35,7 @@ function createDataHolder (lib) {
   DataHolder.prototype.setDataReceived = function () {
     if (this.dataHolderUnderReset===false) {
       this.pristine = false;
+      this.changed.fire('pristine', false);
     }
   };
   DataHolder.prototype.nullValue = null;
