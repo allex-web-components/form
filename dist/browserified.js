@@ -822,12 +822,15 @@ function createFormCollectionMixin (lib, mylib) {
     return this.formCollectionValue;
   };
   FormCollectionMixin.prototype.set_data = function (data) {
+    var forms;
     if (this.formCollectionData == data) {
       return false;
     }
     this.formCollectionData = data;
-    (this.getConfigVal('forms')||[]).forEach(set_dataer.bind(this, data));
+    forms = this.getConfigVal('forms')||[];
+    forms.forEach(set_dataer.bind(this, data));
     data = null;
+    this.set('valid', forms.every(chldName => this.getElement(chldName).get('valid')));
     return true;
   };
   FormCollectionMixin.prototype.get_data = function () {
